@@ -13,6 +13,7 @@ import {
   Sigma,
   Weight,
   Layers,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -54,6 +55,10 @@ export default function ModelConfigPage() {
   const prev = location.state as ModelConfig | null;
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  // Project state
+  const [projectId, setProjectId] = useState<string | null>(prev?.projectId ?? null);
+  const [projectName, setProjectName] = useState(prev?.projectName ?? "");
 
   // Dataset state
   const [file, setFile] = useState<File | null>(null);
@@ -165,12 +170,61 @@ export default function ModelConfigPage() {
   };
 
   const hasData = columns.length > 0;
-  const isValid = hasData && response !== null && family !== null;
+  const isValid = hasData && response !== null && family !== null && projectName.trim().length > 0;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const splitConfig = splitColumn ? { column: splitColumn, mapping: splitMapping } : null;
+
+    let pid = projectId;
+    if (!pid) {
+      // Create a new project
+      try {
+        const res = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: projectName.trim(),
+            config: {
+              dataset_path: datasetPath,
+              response,
+              family,
+              link: effectiveLink,
+              offset,
+              weights,
+              split: splitConfig,
+              columns,
+            },
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        pid = data.id;
+        setProjectId(pid);
+      } catch {
+        return;
+      }
+    } else {
+      // Update existing project config
+      fetch(`/api/projects/${pid}/config`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          config: {
+            dataset_path: datasetPath,
+            response,
+            family,
+            link: effectiveLink,
+            offset,
+            weights,
+            split: splitConfig,
+            columns,
+          },
+        }),
+      }).catch(() => {});
+    }
+
     navigate("/model", {
-      state: { response, family, link: effectiveLink, offset, weights, columns, datasetPath, split: splitConfig },
+      state: { projectId: pid, projectName: projectName.trim(), response, family, link: effectiveLink, offset, weights, columns, datasetPath, split: splitConfig },
     });
   };
 
@@ -348,6 +402,24 @@ export default function ModelConfigPage() {
           </AnimatedSection>
         ) : (
           <div className="space-y-6">
+            {/* Project Name */}
+            <AnimatedSection delay={0.02} zIndex={45}>
+              <GlassCard>
+                <CardHeader
+                  icon={Pencil}
+                  title="Project Name"
+                  subtitle="A name for this modelling session."
+                />
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="e.g. Freq GLM – Motor 2025"
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 transition-all focus:border-primary/30 focus:bg-white/[0.04] focus:outline-none focus:shadow-[0_0_0_1px_#3b82f620]"
+                />
+              </GlassCard>
+            </AnimatedSection>
+
             {/* Response */}
             <AnimatedSection delay={0.05} zIndex={40}>
               <GlassCard>

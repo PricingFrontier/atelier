@@ -1,18 +1,79 @@
 import { useNavigate } from "react-router-dom";
-import { Plus, FolderOpen } from "lucide-react";
-import { useEffect } from "react";
+import { Plus, Clock, GitBranch, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { ProjectSummary } from "@/types";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setProjects)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "n" || e.key === "N") navigate("/new");
-      if (e.key === "l" || e.key === "L") navigate("/load");
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
+
+  const handleLoadProject = async (p: ProjectSummary) => {
+    try {
+      // Fetch project config and latest version in parallel
+      const [projRes, histRes] = await Promise.all([
+        fetch(`/api/projects/${p.id}`),
+        fetch(`/api/models/${p.id}/history`),
+      ]);
+      if (!projRes.ok) return;
+      const detail = await projRes.json();
+      const cfg = detail.config;
+      if (!cfg) return;
+
+      // Get terms from the latest version (first in the list, sorted newest-first)
+      let initialTerms: any[] = [];
+      if (histRes.ok) {
+        const history = await histRes.json();
+        if (history.length > 0) {
+          const latestId = history[0].id;
+          const modelRes = await fetch(`/api/models/detail/${latestId}`);
+          if (modelRes.ok) {
+            const model = await modelRes.json();
+            const specTerms = model.spec?.terms ?? [];
+            initialTerms = specTerms.map((t: any) => ({
+              column: t.column,
+              type: t.type,
+              df: t.df ?? undefined,
+              k: t.k ?? undefined,
+              monotonicity: t.monotonicity ?? undefined,
+              expr: t.expr ?? undefined,
+              label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
+            }));
+          }
+        }
+      }
+
+      navigate("/model", {
+        state: {
+          projectId: p.id,
+          projectName: p.name,
+          response: cfg.response ?? "",
+          family: cfg.family ?? "poisson",
+          link: cfg.link ?? null,
+          offset: cfg.offset ?? null,
+          weights: cfg.weights ?? null,
+          columns: cfg.columns ?? [],
+          datasetPath: cfg.dataset_path ?? null,
+          split: cfg.split ?? null,
+          initialTerms,
+        },
+      });
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
@@ -90,17 +151,45 @@ export default function LandingPage() {
               N
             </kbd>
           </button>
-          <button
-            onClick={() => navigate("/load")}
-            className="group relative flex items-center gap-2.5 overflow-hidden rounded-[0.625rem] border border-border bg-gradient-to-br from-[#151517] to-[#0f0f11] px-6 py-3 text-sm font-medium text-zinc-400 transition-all duration-250 hover:-translate-y-0.5 hover:border-[#2e2e33] hover:text-white hover:shadow-[0_0_0_1px_#2e2e33,0_4px_24px_-4px_#3b82f610,0_0_48px_-12px_#3b82f608]"
-          >
-            <FolderOpen className="h-[18px] w-[18px] opacity-50 transition-opacity group-hover:opacity-80" />
-            Load Model
-            <kbd className="ml-1 rounded bg-[#1e1e22] px-1.5 py-0.5 text-[0.65rem] font-normal text-zinc-600 border border-[#2a2a2e] transition-colors group-hover:text-zinc-500">
-              L
-            </kbd>
-          </button>
         </div>
+
+        {/* Saved projects */}
+        {projects.length > 0 && (
+          <div className="mt-10 animate-[fadeUp_0.8s_ease-out_0.6s_both]">
+            <p className="mb-4 text-[0.65rem] uppercase tracking-[0.15em] text-muted-foreground/40">
+              Recent Projects
+            </p>
+            <div className="flex flex-col items-center gap-2">
+              {projects.map((p, i) => (
+                <button
+                  key={p.id}
+                  onClick={() => handleLoadProject(p)}
+                  className="group flex w-[400px] items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left transition-all hover:border-white/[0.12] hover:bg-white/[0.04]"
+                  style={{ animation: `fadeUp 0.4s ease-out ${0.7 + i * 0.08}s both` }}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <GitBranch className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="truncate text-sm font-medium text-foreground/80 group-hover:text-foreground">
+                      {p.name}
+                    </p>
+                    <div className="flex items-center gap-2 text-[0.65rem] text-muted-foreground/40">
+                      {p.response && <span>{p.response}</span>}
+                      {p.family && <span>· {p.family}</span>}
+                      <span>· {p.n_versions} version{p.n_versions !== 1 ? "s" : ""}</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(p.updated_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/20 transition-all group-hover:translate-x-0.5 group-hover:text-muted-foreground/50" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom bar */}

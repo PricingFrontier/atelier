@@ -7,6 +7,18 @@ from atelier.schemas.model_spec import (
     SplitSpec,
     TermSpec,
 )
+from atelier.schemas.model_save import (
+    ModelSaveRequest,
+    ModelSummary,
+    ModelDetail,
+)
+from atelier.schemas.project import (
+    CreateProjectRequest,
+    ProjectConfig,
+    ProjectDetail,
+    ProjectSummary,
+    UpdateProjectConfigRequest,
+)
 
 __all__ = [
     "ColumnValuesRequest",
@@ -14,4 +26,12 @@ __all__ = [
     "FitRequest",
     "SplitSpec",
     "TermSpec",
+    "ModelSaveRequest",
+    "ModelSummary",
+    "ModelDetail",
+    "CreateProjectRequest",
+    "ProjectConfig",
+    "ProjectDetail",
+    "ProjectSummary",
+    "UpdateProjectConfigRequest",
 ]

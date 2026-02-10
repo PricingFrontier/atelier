@@ -6,10 +6,12 @@ export type {
   ColumnMeta,
   SplitConfig,
   ModelConfig,
+  ProjectSummary,
   CoefRow,
   TermType,
   TermSpec,
   MainTab,
+  ModelSummary,
   MenuPos,
   MenuItem,
 } from "./model";

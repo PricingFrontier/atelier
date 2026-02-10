@@ -20,6 +20,7 @@ import {
   Code2,
   Copy,
   Check,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -28,6 +29,7 @@ import type {
   TermSpec,
   TermType,
   MainTab,
+  ModelSummary,
   MenuPos,
   MenuItem,
   ExplorationData,
@@ -44,7 +46,7 @@ export default function ModelBuilderPage() {
 
   const [search, setSearch] = useState("");
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [terms, setTerms] = useState<TermSpec[]>([]);
+  const [terms, setTerms] = useState<TermSpec[]>(config?.initialTerms ?? []);
 
   // Exploration state (run once on mount)
   const [exploration, setExploration] = useState<ExplorationData | null>(null);
@@ -58,6 +60,24 @@ export default function ModelBuilderPage() {
   // Main panel state
   const [activeTab, setActiveTab] = useState<MainTab>("charts");
   const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
+
+  // Version / history state
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
+  const [history, setHistory] = useState<ModelSummary[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchHistory = useCallback(() => {
+    if (!config?.projectId) return;
+    setHistoryLoading(true);
+    fetch(`/api/models/${config.projectId}/history`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setHistory(data))
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }, [config?.projectId]);
+
+  // Fetch history on mount
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
   // Context menu state
   const [menuPos, setMenuPos] = useState<MenuPos | null>(null);
@@ -176,6 +196,47 @@ export default function ModelBuilderPage() {
       }
       const data: FitResult = await res.json();
       setFitResult(data);
+
+      // Auto-save to DB
+      try {
+        if (!config.projectId) throw new Error("No project ID");
+        const saveRes = await fetch("/api/models/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_id: config.projectId,
+            dataset_path: config.datasetPath,
+            response: config.response,
+            family: config.family,
+            link: config.link,
+            offset: config.offset,
+            weights: config.weights,
+            terms: terms.map((t) => ({
+              column: t.column,
+              type: t.type,
+              df: t.df ?? null,
+              k: t.k ?? null,
+              monotonicity: t.monotonicity ?? null,
+              expr: t.expr ?? null,
+            })),
+            split: config.split ?? undefined,
+            deviance: data.deviance,
+            null_deviance: data.null_deviance,
+            aic: data.aic,
+            bic: data.bic,
+            n_obs: data.n_obs,
+            n_params: data.n_params,
+            fit_duration_ms: data.fit_duration_ms,
+            coef_table: data.coef_table,
+            diagnostics: data.diagnostics,
+          }),
+        });
+        if (saveRes.ok) {
+          const saved = await saveRes.json();
+          setCurrentVersion(saved.version);
+          fetchHistory();
+        }
+      } catch { /* save is best-effort */ }
     } catch (err: any) {
       setFitError(err.message || "Model fit failed");
     } finally {
@@ -372,7 +433,14 @@ export default function ModelBuilderPage() {
           Setup
         </button>
         <div className="h-4 w-px bg-white/[0.08]" />
-        <span className="text-sm font-medium tracking-wide text-foreground">Model Builder</span>
+        <span className="text-sm font-medium tracking-wide text-foreground">
+          {config.projectName || "Model Builder"}
+        </span>
+        {currentVersion && (
+          <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[0.65rem] font-semibold text-primary">
+            v{currentVersion}
+          </span>
+        )}
         <div className="h-4 w-px bg-white/[0.08]" />
         <div className="flex items-center gap-2">
           <ConfigPill label="Response" value={config.response} />
@@ -556,6 +624,14 @@ export default function ModelBuilderPage() {
                   label="Summary"
                 />
               )}
+              {history.length > 0 && (
+                <TabButton
+                  active={activeTab === "history"}
+                  onClick={() => setActiveTab("history")}
+                  icon={<Clock className="h-3.5 w-3.5" />}
+                  label={`History (${history.length})`}
+                />
+              )}
               <TabButton
                 active={activeTab === "code"}
                 onClick={() => setActiveTab("code")}
@@ -569,6 +645,12 @@ export default function ModelBuilderPage() {
           <div className="flex-1 overflow-y-auto">
             {activeTab === "code" && config && terms.length > 0 ? (
               <CodePanel config={config} terms={terms} />
+            ) : activeTab === "history" ? (
+              <HistoryPanel
+                history={history}
+                loading={historyLoading}
+                currentVersion={currentVersion}
+              />
             ) : fitResult && activeTab === "summary" ? (
               <FitResultsPanel result={fitResult} />
             ) : fitError ? (
@@ -839,6 +921,119 @@ function CodePanel({ config, terms }: { config: ModelConfig; terms: TermSpec[] }
           <code>{code}</code>
         </pre>
       </div>
+    </div>
+  );
+}
+
+function HistoryPanel({
+  history,
+  loading,
+  currentVersion,
+}: {
+  history: ModelSummary[];
+  loading: boolean;
+  currentVersion: number | null;
+}) {
+  return (
+    <div className="flex-1 overflow-y-auto p-6" style={{ animation: "fadeUp 0.4s ease-out both" }}>
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+          <Clock className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Version History</p>
+          <p className="text-[0.7rem] text-muted-foreground/50">
+            {history.length} saved version{history.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
+        </div>
+      ) : history.length === 0 ? (
+        <div className="py-12 text-center text-sm text-muted-foreground/40">
+          No models saved yet. Fit a model to create the first version.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {history.map((m, i) => {
+            const isCurrent = m.version === currentVersion;
+            return (
+              <div
+                key={m.id}
+                className={cn(
+                  "rounded-xl border p-4 transition-all",
+                  isCurrent
+                    ? "border-primary/30 bg-primary/[0.04]"
+                    : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.03]"
+                )}
+                style={{ animation: `fadeUp 0.3s ease-out ${0.03 * i}s both` }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold",
+                      isCurrent ? "bg-primary/15 text-primary" : "bg-white/[0.06] text-muted-foreground/60"
+                    )}>
+                      v{m.version}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-foreground/80">
+                          {m.n_terms} term{m.n_terms !== 1 ? "s" : ""}
+                        </span>
+                        {m.family && (
+                          <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[0.6rem] text-muted-foreground/50">
+                            {m.family}
+                          </span>
+                        )}
+                        {isCurrent && (
+                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[0.6rem] font-semibold text-primary">
+                            current
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground/40">
+                        {new Date(m.created_at).toLocaleString()}
+                        {m.fit_duration_ms != null && ` · ${m.fit_duration_ms}ms`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {/* Metrics row */}
+                <div className="mt-3 flex gap-4">
+                  {m.aic != null && (
+                    <div>
+                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">AIC</p>
+                      <p className="font-mono text-xs text-foreground/70">{m.aic.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {m.bic != null && (
+                    <div>
+                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">BIC</p>
+                      <p className="font-mono text-xs text-foreground/70">{m.bic.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {m.deviance != null && (
+                    <div>
+                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">Deviance</p>
+                      <p className="font-mono text-xs text-foreground/70">{m.deviance.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {m.n_obs != null && (
+                    <div>
+                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">Obs</p>
+                      <p className="font-mono text-xs text-foreground/70">{m.n_obs.toLocaleString()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

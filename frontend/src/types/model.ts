@@ -17,6 +17,8 @@ export interface SplitConfig {
 }
 
 export interface ModelConfig {
+  projectId: string | null;
+  projectName: string;
   response: string;
   family: string;
   link: string;
@@ -25,6 +27,17 @@ export interface ModelConfig {
   columns: ColumnMeta[];
   datasetPath: string | null;
   split: SplitConfig | null;
+  initialTerms?: TermSpec[];
+}
+
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  n_versions: number;
+  created_at: string;
+  updated_at: string;
+  family: string | null;
+  response: string | null;
 }
 
 export interface CoefRow {
@@ -64,7 +77,20 @@ export const TERM_COLORS: Record<TermType, { bg: string; text: string; label: st
   expression:         { bg: "bg-zinc-500/15",   text: "text-zinc-400",   label: "Expr" },
 };
 
-export type MainTab = "charts" | "summary" | "code";
+export type MainTab = "charts" | "summary" | "history" | "code";
+
+export interface ModelSummary {
+  id: string;
+  version: number;
+  created_at: string;
+  n_terms: number;
+  deviance: number | null;
+  aic: number | null;
+  bic: number | null;
+  n_obs: number | null;
+  family: string | null;
+  fit_duration_ms: number | null;
+}
 
 export interface MenuPos {
   x: number;

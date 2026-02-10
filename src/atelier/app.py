@@ -36,10 +36,14 @@ def create_app() -> FastAPI:
     from atelier.api.datasets import router as datasets_router
     from atelier.api.explore import router as explore_router
     from atelier.api.fit import router as fit_router
+    from atelier.api.models import router as models_router
+    from atelier.api.projects import router as projects_router
 
     app.include_router(datasets_router, prefix="/api")
     app.include_router(explore_router, prefix="/api")
     app.include_router(fit_router, prefix="/api")
+    app.include_router(models_router, prefix="/api")
+    app.include_router(projects_router, prefix="/api")
 
     # --- WebSocket router will be registered here ---
     # app.include_router(ws.router, prefix="/ws")
@@ -55,6 +59,9 @@ def create_app() -> FastAPI:
     # SPA catch-all — must be registered last
     @app.get("/{full_path:path}")
     async def spa_catch_all(full_path: str):
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(
+            STATIC_DIR / "index.html",
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
 
     return app
