@@ -27,7 +27,6 @@ export interface ModelConfig {
   columns: ColumnMeta[];
   datasetPath: string | null;
   split: SplitConfig | null;
-  initialTerms?: TermSpec[];
 }
 
 export interface ProjectSummary {
@@ -79,17 +78,28 @@ export const TERM_COLORS: Record<TermType, { bg: string; text: string; label: st
 
 export type MainTab = "charts" | "summary" | "history" | "code";
 
+export interface VersionChange {
+  kind: "added" | "removed" | "modified";
+  description: string;
+}
+
+export interface SplitMetrics {
+  n_obs: number | null;
+  mean_deviance: number | null;
+  aic: number | null;
+  gini: number | null;
+}
+
 export interface ModelSummary {
   id: string;
   version: number;
   created_at: string;
   n_terms: number;
-  deviance: number | null;
-  aic: number | null;
-  bic: number | null;
-  n_obs: number | null;
   family: string | null;
   fit_duration_ms: number | null;
+  train: SplitMetrics;
+  test: SplitMetrics | null;
+  changes: VersionChange[];
 }
 
 export interface MenuPos {

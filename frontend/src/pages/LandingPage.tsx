@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Plus, Clock, GitBranch, ArrowRight } from "lucide-react";
+import { Plus, Clock, GitBranch, ArrowRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ProjectSummary } from "@/types";
 
@@ -24,39 +24,13 @@ export default function LandingPage() {
 
   const handleLoadProject = async (p: ProjectSummary) => {
     try {
-      // Fetch project config and latest version in parallel
-      const [projRes, histRes] = await Promise.all([
-        fetch(`/api/projects/${p.id}`),
-        fetch(`/api/models/${p.id}/history`),
-      ]);
-      if (!projRes.ok) return;
-      const detail = await projRes.json();
+      const res = await fetch(`/api/projects/${p.id}`);
+      if (!res.ok) return;
+      const detail = await res.json();
       const cfg = detail.config;
       if (!cfg) return;
 
-      // Get terms from the latest version (first in the list, sorted newest-first)
-      let initialTerms: any[] = [];
-      if (histRes.ok) {
-        const history = await histRes.json();
-        if (history.length > 0) {
-          const latestId = history[0].id;
-          const modelRes = await fetch(`/api/models/detail/${latestId}`);
-          if (modelRes.ok) {
-            const model = await modelRes.json();
-            const specTerms = model.spec?.terms ?? [];
-            initialTerms = specTerms.map((t: any) => ({
-              column: t.column,
-              type: t.type,
-              df: t.df ?? undefined,
-              k: t.k ?? undefined,
-              monotonicity: t.monotonicity ?? undefined,
-              expr: t.expr ?? undefined,
-              label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
-            }));
-          }
-        }
-      }
-
+      // Pass basic config — builder will fetch terms + fit result on mount
       navigate("/model", {
         state: {
           projectId: p.id,
@@ -69,9 +43,17 @@ export default function LandingPage() {
           columns: cfg.columns ?? [],
           datasetPath: cfg.dataset_path ?? null,
           split: cfg.split ?? null,
-          initialTerms,
         },
       });
+    } catch { /* ignore */ }
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    try {
+      const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+      }
     } catch { /* ignore */ }
   };
 
@@ -161,10 +143,10 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col items-center gap-2">
               {projects.map((p, i) => (
-                <button
+                <div
                   key={p.id}
                   onClick={() => handleLoadProject(p)}
-                  className="group flex w-[400px] items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left transition-all hover:border-white/[0.12] hover:bg-white/[0.04]"
+                  className="group flex w-[400px] cursor-pointer items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-left transition-all hover:border-white/[0.12] hover:bg-white/[0.04]"
                   style={{ animation: `fadeUp 0.4s ease-out ${0.7 + i * 0.08}s both` }}
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -184,8 +166,18 @@ export default function LandingPage() {
                       </span>
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteProject(p.id);
+                    }}
+                    className="rounded-lg p-1.5 text-muted-foreground/20 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                    title="Delete project"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                   <ArrowRight className="h-4 w-4 text-muted-foreground/20 transition-all group-hover:translate-x-0.5 group-hover:text-muted-foreground/50" />
-                </button>
+                </div>
               ))}
             </div>
           </div>

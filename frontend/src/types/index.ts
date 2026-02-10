@@ -11,6 +11,7 @@ export type {
   TermType,
   TermSpec,
   MainTab,
+  SplitMetrics,
   ModelSummary,
   MenuPos,
   MenuItem,

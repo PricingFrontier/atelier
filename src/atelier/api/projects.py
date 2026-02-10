@@ -6,8 +6,10 @@ import logging
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
+from sqlalchemy import delete as sa_delete
+
 from atelier.db.engine import get_session_factory
-from atelier.db.models import Project
+from atelier.db.models import Model, Project
 from atelier.schemas import (
     CreateProjectRequest,
     ProjectDetail,
@@ -98,4 +100,23 @@ async def update_project_config(project_id: str, req: UpdateProjectConfigRequest
 
         project.config = req.config.model_dump()
         await session.commit()
+        return {"ok": True}
+
+
+@router.delete("/projects/{project_id}")
+async def delete_project(project_id: str):
+    """Delete a project and all its saved model versions."""
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        project = await session.get(Project, project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        await session.execute(
+            sa_delete(Model).where(Model.project_id == project_id)
+        )
+        await session.delete(project)
+        await session.commit()
+
+        log.info("Deleted project '%s' (id=%s)", project.name, project_id)
         return {"ok": True}

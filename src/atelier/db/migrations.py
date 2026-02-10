@@ -14,6 +14,8 @@ async def ensure_schema() -> None:
     _COLUMN_MIGRATIONS: list[tuple[str, str, str]] = [
         ("models", "df_model", "REAL"),
         ("models", "df_resid", "REAL"),
+        ("models", "n_validation", "INTEGER"),
+        ("models", "n_params", "INTEGER"),
         ("projects", "config", "JSON"),
         ("projects", "n_versions", "INTEGER DEFAULT 0"),
     ]

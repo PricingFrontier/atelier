@@ -30,6 +30,7 @@ import type {
   TermType,
   MainTab,
   ModelSummary,
+  SplitMetrics,
   MenuPos,
   MenuItem,
   ExplorationData,
@@ -46,7 +47,7 @@ export default function ModelBuilderPage() {
 
   const [search, setSearch] = useState("");
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [terms, setTerms] = useState<TermSpec[]>(config?.initialTerms ?? []);
+  const [terms, setTerms] = useState<TermSpec[]>([]);
 
   // Exploration state (run once on mount)
   const [exploration, setExploration] = useState<ExplorationData | null>(null);
@@ -65,6 +66,7 @@ export default function ModelBuilderPage() {
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [history, setHistory] = useState<ModelSummary[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const fetchHistory = useCallback(() => {
     if (!config?.projectId) return;
@@ -76,8 +78,70 @@ export default function ModelBuilderPage() {
       .finally(() => setHistoryLoading(false));
   }, [config?.projectId]);
 
-  // Fetch history on mount
-  useEffect(() => { fetchHistory(); }, [fetchHistory]);
+  // On mount: fetch history, then restore latest version (terms + fit result)
+  useEffect(() => {
+    if (!config?.projectId) return;
+    let cancelled = false;
+
+    (async () => {
+      setRestoring(true);
+      try {
+        // Fetch history
+        const histRes = await fetch(`/api/models/${config.projectId}/history`);
+        if (!histRes.ok || cancelled) return;
+        const hist = await histRes.json();
+        setHistory(hist);
+
+        if (hist.length === 0) return;
+
+        // Fetch latest version detail
+        const latestId = hist[0].id;
+        const detailRes = await fetch(`/api/models/detail/${latestId}`);
+        if (!detailRes.ok || cancelled) return;
+        const model = await detailRes.json();
+
+        // Hydrate terms
+        const specTerms = model.spec?.terms ?? [];
+        setTerms(
+          specTerms.map((t: any) => ({
+            column: t.column,
+            type: t.type,
+            df: t.df ?? undefined,
+            k: t.k ?? undefined,
+            monotonicity: t.monotonicity ?? undefined,
+            expr: t.expr ?? undefined,
+            label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
+          }))
+        );
+        setCurrentVersion(model.version);
+
+        // Hydrate fit result if we have coef_table (i.e. a completed fit)
+        if (model.coef_table) {
+          const spec = model.spec ?? {};
+          setFitResult({
+            success: true,
+            fit_duration_ms: model.fit_duration_ms ?? 0,
+            summary: model.summary ?? "",
+            coef_table: model.coef_table,
+            n_obs: model.n_obs ?? 0,
+            n_validation: model.n_validation ?? null,
+            deviance: model.deviance ?? null,
+            null_deviance: model.null_deviance ?? null,
+            aic: model.aic ?? null,
+            bic: model.bic ?? null,
+            family: spec.family ?? "",
+            link: spec.link ?? "",
+            n_terms: specTerms.length,
+            n_params: model.n_params ?? specTerms.length,
+            diagnostics: model.diagnostics ?? null,
+          });
+        }
+      } catch { /* best effort */ }
+      finally { if (!cancelled) setRestoring(false); }
+    })();
+
+    return () => { cancelled = true; };
+  }, [config?.projectId]);
 
   // Context menu state
   const [menuPos, setMenuPos] = useState<MenuPos | null>(null);
@@ -225,8 +289,10 @@ export default function ModelBuilderPage() {
             aic: data.aic,
             bic: data.bic,
             n_obs: data.n_obs,
+            n_validation: data.n_validation,
             n_params: data.n_params,
             fit_duration_ms: data.fit_duration_ms,
+            summary: data.summary,
             coef_table: data.coef_table,
             diagnostics: data.diagnostics,
           }),
@@ -243,6 +309,53 @@ export default function ModelBuilderPage() {
       setFitting(false);
     }
   }, [config, terms]);
+
+  const handleRestoreVersion = useCallback(async (modelId: string) => {
+    setRestoring(true);
+    try {
+      const res = await fetch(`/api/models/detail/${modelId}`);
+      if (!res.ok) return;
+      const model = await res.json();
+
+      const specTerms = model.spec?.terms ?? [];
+      setTerms(
+        specTerms.map((t: any) => ({
+          column: t.column,
+          type: t.type,
+          df: t.df ?? undefined,
+          k: t.k ?? undefined,
+          monotonicity: t.monotonicity ?? undefined,
+          expr: t.expr ?? undefined,
+          label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
+        }))
+      );
+      setCurrentVersion(model.version);
+
+      if (model.coef_table) {
+        const spec = model.spec ?? {};
+        setFitResult({
+          success: true,
+          fit_duration_ms: model.fit_duration_ms ?? 0,
+          summary: model.summary ?? "",
+          coef_table: model.coef_table,
+          n_obs: model.n_obs ?? 0,
+          n_validation: model.n_validation ?? null,
+          deviance: model.deviance ?? null,
+          null_deviance: model.null_deviance ?? null,
+          aic: model.aic ?? null,
+          bic: model.bic ?? null,
+          family: spec.family ?? "",
+          link: spec.link ?? "",
+          n_terms: specTerms.length,
+          n_params: model.n_params ?? specTerms.length,
+          diagnostics: model.diagnostics ?? null,
+        });
+      } else {
+        setFitResult(null);
+      }
+    } catch { /* best effort */ }
+    finally { setRestoring(false); }
+  }, []);
 
   const handleFactorClick = useCallback((col: ColumnMeta) => {
     setSelectedFactor((prev) => prev === col.name ? null : col.name);
@@ -436,11 +549,16 @@ export default function ModelBuilderPage() {
         <span className="text-sm font-medium tracking-wide text-foreground">
           {config.projectName || "Model Builder"}
         </span>
-        {currentVersion && (
+        {restoring ? (
+          <span className="flex items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-0.5 text-[0.65rem] text-muted-foreground/50">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            restoring
+          </span>
+        ) : currentVersion ? (
           <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[0.65rem] font-semibold text-primary">
             v{currentVersion}
           </span>
-        )}
+        ) : null}
         <div className="h-4 w-px bg-white/[0.08]" />
         <div className="flex items-center gap-2">
           <ConfigPill label="Response" value={config.response} />
@@ -650,6 +768,8 @@ export default function ModelBuilderPage() {
                 history={history}
                 loading={historyLoading}
                 currentVersion={currentVersion}
+                onRestore={handleRestoreVersion}
+                restoring={restoring}
               />
             ) : fitResult && activeTab === "summary" ? (
               <FitResultsPanel result={fitResult} />
@@ -929,10 +1049,14 @@ function HistoryPanel({
   history,
   loading,
   currentVersion,
+  onRestore,
+  restoring: isRestoring,
 }: {
   history: ModelSummary[];
   loading: boolean;
   currentVersion: number | null;
+  onRestore: (modelId: string) => void;
+  restoring: boolean;
 }) {
   return (
     <div className="flex-1 overflow-y-auto p-6" style={{ animation: "fadeUp 0.4s ease-out both" }}>
@@ -1001,37 +1125,109 @@ function HistoryPanel({
                       </p>
                     </div>
                   </div>
-                </div>
-                {/* Metrics row */}
-                <div className="mt-3 flex gap-4">
-                  {m.aic != null && (
-                    <div>
-                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">AIC</p>
-                      <p className="font-mono text-xs text-foreground/70">{m.aic.toFixed(2)}</p>
-                    </div>
-                  )}
-                  {m.bic != null && (
-                    <div>
-                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">BIC</p>
-                      <p className="font-mono text-xs text-foreground/70">{m.bic.toFixed(2)}</p>
-                    </div>
-                  )}
-                  {m.deviance != null && (
-                    <div>
-                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">Deviance</p>
-                      <p className="font-mono text-xs text-foreground/70">{m.deviance.toFixed(2)}</p>
-                    </div>
-                  )}
-                  {m.n_obs != null && (
-                    <div>
-                      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">Obs</p>
-                      <p className="font-mono text-xs text-foreground/70">{m.n_obs.toLocaleString()}</p>
-                    </div>
+                  {!isCurrent && (
+                    <button
+                      disabled={isRestoring}
+                      onClick={() => onRestore(m.id)}
+                      className="rounded-lg border border-white/[0.08] px-2.5 py-1 text-[0.65rem] font-medium text-muted-foreground/60 transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary disabled:opacity-40"
+                    >
+                      {isRestoring ? "Restoring…" : "Restore"}
+                    </button>
                   )}
                 </div>
+                {/* Changes */}
+                {m.changes && m.changes.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {m.changes.map((c, ci) => (
+                      <span
+                        key={ci}
+                        className={cn(
+                          "rounded-md px-2 py-0.5 text-[0.6rem] font-medium",
+                          c.kind === "added" && "bg-emerald-500/10 text-emerald-400",
+                          c.kind === "removed" && "bg-red-500/10 text-red-400",
+                          c.kind === "modified" && "bg-amber-500/10 text-amber-400",
+                        )}
+                      >
+                        {c.description}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Metrics */}
+                <MetricsRow
+                  label="Train"
+                  metrics={m.train}
+                  prev={history[i + 1]?.train ?? null}
+                />
+                {m.test && (
+                  <MetricsRow
+                    label="Test"
+                    metrics={m.test}
+                    prev={history[i + 1]?.test ?? null}
+                  />
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricCell({
+  label,
+  value,
+  prevValue,
+  lowerIsBetter,
+  format,
+}: {
+  label: string;
+  value: number | null;
+  prevValue: number | null;
+  lowerIsBetter: boolean;
+  format: (v: number) => string;
+}) {
+  if (value == null) return null;
+  let color = "text-foreground/70";
+  if (prevValue != null) {
+    const improved = lowerIsBetter ? value < prevValue : value > prevValue;
+    const same = Math.abs(value - prevValue) < 1e-10;
+    if (!same) color = improved ? "text-emerald-400" : "text-red-400";
+  }
+  return (
+    <div>
+      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">{label}</p>
+      <p className={cn("font-mono text-xs", color)}>{format(value)}</p>
+    </div>
+  );
+}
+
+function MetricsRow({
+  label,
+  metrics,
+  prev,
+}: {
+  label: string;
+  metrics: SplitMetrics;
+  prev: SplitMetrics | null;
+}) {
+  const fmt2 = (v: number) => v.toFixed(2);
+  const fmt4 = (v: number) => v.toFixed(4);
+  const fmt6 = (v: number) => v.toFixed(6);
+
+  return (
+    <div className="mt-2.5 flex items-center gap-4">
+      <span className="w-9 text-[0.55rem] font-semibold uppercase tracking-wider text-muted-foreground/40">
+        {label}
+      </span>
+      <MetricCell label="Mean Dev" value={metrics.mean_deviance} prevValue={prev?.mean_deviance ?? null} lowerIsBetter format={fmt6} />
+      <MetricCell label="AIC" value={metrics.aic} prevValue={prev?.aic ?? null} lowerIsBetter format={fmt2} />
+      <MetricCell label="Gini" value={metrics.gini} prevValue={prev?.gini ?? null} lowerIsBetter={false} format={fmt4} />
+      {metrics.n_obs != null && (
+        <div>
+          <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">Obs</p>
+          <p className="font-mono text-xs text-foreground/70">{metrics.n_obs.toLocaleString()}</p>
         </div>
       )}
     </div>
@@ -1058,11 +1254,19 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
 
 function ConfigPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-white/[0.04] px-2.5 py-1">
-      <span className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/40">
+    <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1">
+      <span
+        className="text-[0.6rem] uppercase tracking-wider text-muted-foreground"
+        style={{ textShadow: "0 0 6px hsl(217 91% 60% / 0.5)" }}
+      >
         {label}
       </span>
-      <span className="text-[0.65rem] font-medium text-foreground/70">{value}</span>
+      <span
+        className="text-[0.65rem] font-semibold text-primary"
+        style={{ textShadow: "0 0 8px hsl(217 91% 60% / 0.8), 0 0 20px hsl(217 91% 60% / 0.4)" }}
+      >
+        {value}
+      </span>
     </div>
   );
 }

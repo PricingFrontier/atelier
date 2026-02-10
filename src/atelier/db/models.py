@@ -85,6 +85,8 @@ class Model(Base):
     converged: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     iterations: Mapped[int | None] = mapped_column(Integer, nullable=True)
     n_obs: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    n_validation: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    n_params: Mapped[int | None] = mapped_column(Integer, nullable=True)
     df_model: Mapped[float | None] = mapped_column(Float, nullable=True)
     df_resid: Mapped[float | None] = mapped_column(Float, nullable=True)
     model_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
