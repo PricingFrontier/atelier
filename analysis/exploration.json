@@ -1,0 +1,1243 @@
+{
+  "data_summary": {
+    "n_rows": 406439,
+    "n_columns": 13,
+    "response_column": "ClaimCount",
+    "exposure_column": "Exposure",
+    "n_categorical_factors": 5,
+    "n_continuous_factors": 5
+  },
+  "factor_stats": [
+    {
+      "name": "IDpol",
+      "type": "continuous",
+      "mean": 2621334.12,
+      "std": 1640727.95,
+      "min": 5.0,
+      "max": 6114330.0,
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "response_by_bin": [
+        {
+          "bin_index": 0,
+          "bin_lower": 5.0,
+          "bin_upper": 143918.6,
+          "count": 40644,
+          "exposure": 24097.79,
+          "response_sum": 7624.0,
+          "response_rate": 0.316378
+        },
+        {
+          "bin_index": 1,
+          "bin_lower": 143918.6,
+          "bin_upper": 1096569.2,
+          "count": 40644,
+          "exposure": 25420.3,
+          "response_sum": 1988.0,
+          "response_rate": 0.078205
+        },
+        {
+          "bin_index": 2,
+          "bin_lower": 1096569.2,
+          "bin_upper": 2008399.8,
+          "count": 40644,
+          "exposure": 25348.6,
+          "response_sum": 2057.0,
+          "response_rate": 0.081148
+        },
+        {
+          "bin_index": 3,
+          "bin_lower": 2008399.8,
+          "bin_upper": 2142949.2,
+          "count": 40644,
+          "exposure": 23949.17,
+          "response_sum": 1902.0,
+          "response_rate": 0.079418
+        },
+        {
+          "bin_index": 4,
+          "bin_lower": 2142949.2,
+          "bin_upper": 2271941.0,
+          "count": 40643,
+          "exposure": 18635.04,
+          "response_sum": 1210.0,
+          "response_rate": 0.064931
+        },
+        {
+          "bin_index": 5,
+          "bin_lower": 2271941.0,
+          "bin_upper": 3099852.6,
+          "count": 40644,
+          "exposure": 19305.36,
+          "response_sum": 1218.0,
+          "response_rate": 0.063091
+        },
+        {
+          "bin_index": 6,
+          "bin_lower": 3099852.6,
+          "bin_upper": 3239760.8,
+          "count": 40644,
+          "exposure": 22087.28,
+          "response_sum": 1735.0,
+          "response_rate": 0.078552
+        },
+        {
+          "bin_index": 7,
+          "bin_lower": 3239760.8,
+          "bin_upper": 4133452.4,
+          "count": 40644,
+          "exposure": 17410.48,
+          "response_sum": 1047.0,
+          "response_rate": 0.060136
+        },
+        {
+          "bin_index": 8,
+          "bin_lower": 4133452.4,
+          "bin_upper": 5035551.6,
+          "count": 40644,
+          "exposure": 24051.53,
+          "response_sum": 1689.0,
+          "response_rate": 0.070224
+        },
+        {
+          "bin_index": 9,
+          "bin_lower": 5035551.6,
+          "bin_upper": 6114330.0,
+          "count": 40644,
+          "exposure": 14625.34,
+          "response_sum": 938.0,
+          "response_rate": 0.064135
+        }
+      ],
+      "modeling_hints": {
+        "shape": "u_shaped",
+        "recommendation": "spline or polynomial",
+        "thin_cells": null,
+        "thin_cell_warning": null
+      }
+    },
+    {
+      "name": "VehAge",
+      "type": "continuous",
+      "mean": 7.0523,
+      "std": 5.68,
+      "min": 0.0,
+      "max": 100.0,
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "response_by_bin": [
+        {
+          "bin_index": 0,
+          "bin_lower": 0.0,
+          "bin_upper": 1.0,
+          "count": 34724,
+          "exposure": 10049.44,
+          "response_sum": 3008.0,
+          "response_rate": 0.29932
+        },
+        {
+          "bin_index": 1,
+          "bin_lower": 1.0,
+          "bin_upper": 2.0,
+          "count": 42680,
+          "exposure": 19679.24,
+          "response_sum": 1730.0,
+          "response_rate": 0.08791
+        },
+        {
+          "bin_index": 2,
+          "bin_lower": 2.0,
+          "bin_upper": 3.0,
+          "count": 35401,
+          "exposure": 17807.23,
+          "response_sum": 1636.0,
+          "response_rate": 0.091873
+        },
+        {
+          "bin_index": 3,
+          "bin_lower": 3.0,
+          "bin_upper": 4.0,
+          "count": 30085,
+          "exposure": 15579.53,
+          "response_sum": 1409.0,
+          "response_rate": 0.090439
+        },
+        {
+          "bin_index": 4,
+          "bin_lower": 4.0,
+          "bin_upper": 6.0,
+          "count": 49076,
+          "exposure": 27364.27,
+          "response_sum": 2589.0,
+          "response_rate": 0.094612
+        },
+        {
+          "bin_index": 5,
+          "bin_lower": 6.0,
+          "bin_upper": 8.0,
+          "count": 41009,
+          "exposure": 23930.87,
+          "response_sum": 2482.0,
+          "response_rate": 0.103715
+        },
+        {
+          "bin_index": 6,
+          "bin_lower": 8.0,
+          "bin_upper": 10.0,
+          "count": 38964,
+          "exposure": 22975.65,
+          "response_sum": 2228.0,
+          "response_rate": 0.096972
+        },
+        {
+          "bin_index": 7,
+          "bin_lower": 10.0,
+          "bin_upper": 12.0,
+          "count": 40550,
+          "exposure": 23007.97,
+          "response_sum": 2219.0,
+          "response_rate": 0.096445
+        },
+        {
+          "bin_index": 8,
+          "bin_lower": 12.0,
+          "bin_upper": 15.0,
+          "count": 48526,
+          "exposure": 28503.08,
+          "response_sum": 2389.0,
+          "response_rate": 0.083815
+        },
+        {
+          "bin_index": 9,
+          "bin_lower": 15.0,
+          "bin_upper": 100.0,
+          "count": 45424,
+          "exposure": 26033.61,
+          "response_sum": 1718.0,
+          "response_rate": 0.065992
+        }
+      ],
+      "modeling_hints": {
+        "shape": "step_function",
+        "recommendation": "banding or categorical",
+        "thin_cells": null,
+        "thin_cell_warning": null
+      }
+    },
+    {
+      "name": "DrivAge",
+      "type": "continuous",
+      "mean": 45.4978,
+      "std": 14.1437,
+      "min": 18.0,
+      "max": 100.0,
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "response_by_bin": [
+        {
+          "bin_index": 0,
+          "bin_lower": 18.0,
+          "bin_upper": 28.0,
+          "count": 36680,
+          "exposure": 15575.17,
+          "response_sum": 2363.0,
+          "response_rate": 0.151716
+        },
+        {
+          "bin_index": 1,
+          "bin_lower": 28.0,
+          "bin_upper": 32.0,
+          "count": 35675,
+          "exposure": 16254.71,
+          "response_sum": 1562.0,
+          "response_rate": 0.096095
+        },
+        {
+          "bin_index": 2,
+          "bin_lower": 32.0,
+          "bin_upper": 36.0,
+          "count": 40504,
+          "exposure": 19536.38,
+          "response_sum": 1719.0,
+          "response_rate": 0.08799
+        },
+        {
+          "bin_index": 3,
+          "bin_lower": 36.0,
+          "bin_upper": 40.0,
+          "count": 41500,
+          "exposure": 20940.44,
+          "response_sum": 1840.0,
+          "response_rate": 0.087868
+        },
+        {
+          "bin_index": 4,
+          "bin_lower": 40.0,
+          "bin_upper": 44.0,
+          "count": 40523,
+          "exposure": 21032.82,
+          "response_sum": 2017.0,
+          "response_rate": 0.095898
+        },
+        {
+          "bin_index": 5,
+          "bin_lower": 44.0,
+          "bin_upper": 48.0,
+          "count": 39478,
+          "exposure": 20969.72,
+          "response_sum": 2170.0,
+          "response_rate": 0.103483
+        },
+        {
+          "bin_index": 6,
+          "bin_lower": 48.0,
+          "bin_upper": 53.0,
+          "count": 49851,
+          "exposure": 27605.19,
+          "response_sum": 2903.0,
+          "response_rate": 0.105161
+        },
+        {
+          "bin_index": 7,
+          "bin_lower": 53.0,
+          "bin_upper": 57.0,
+          "count": 35703,
+          "exposure": 19998.78,
+          "response_sum": 1936.0,
+          "response_rate": 0.096806
+        },
+        {
+          "bin_index": 8,
+          "bin_lower": 57.0,
+          "bin_upper": 65.0,
+          "count": 42653,
+          "exposure": 24157.29,
+          "response_sum": 2230.0,
+          "response_rate": 0.092312
+        },
+        {
+          "bin_index": 9,
+          "bin_lower": 65.0,
+          "bin_upper": 100.0,
+          "count": 43872,
+          "exposure": 28860.39,
+          "response_sum": 2668.0,
+          "response_rate": 0.092445
+        }
+      ],
+      "modeling_hints": {
+        "shape": "step_function",
+        "recommendation": "banding or categorical",
+        "thin_cells": null,
+        "thin_cell_warning": null
+      }
+    },
+    {
+      "name": "BonusMalus",
+      "type": "continuous",
+      "mean": 59.7523,
+      "std": 15.6275,
+      "min": 50.0,
+      "max": 230.0,
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "response_by_bin": [
+        {
+          "bin_index": 5,
+          "bin_lower": 50.0,
+          "bin_upper": 53.0,
+          "count": 242659,
+          "exposure": 141710.21,
+          "response_sum": 11215.0,
+          "response_rate": 0.07914
+        },
+        {
+          "bin_index": 6,
+          "bin_lower": 53.0,
+          "bin_upper": 60.0,
+          "count": 33885,
+          "exposure": 17228.35,
+          "response_sum": 1720.0,
+          "response_rate": 0.099835
+        },
+        {
+          "bin_index": 7,
+          "bin_lower": 60.0,
+          "bin_upper": 72.0,
+          "count": 45909,
+          "exposure": 21369.57,
+          "response_sum": 2755.0,
+          "response_rate": 0.128922
+        },
+        {
+          "bin_index": 8,
+          "bin_lower": 72.0,
+          "bin_upper": 85.0,
+          "count": 36482,
+          "exposure": 15658.45,
+          "response_sum": 2016.0,
+          "response_rate": 0.128748
+        },
+        {
+          "bin_index": 9,
+          "bin_lower": 85.0,
+          "bin_upper": 230.0,
+          "count": 47504,
+          "exposure": 18964.33,
+          "response_sum": 3702.0,
+          "response_rate": 0.195209
+        }
+      ],
+      "modeling_hints": {
+        "shape": "monotonic_increasing",
+        "recommendation": "linear or log",
+        "thin_cells": null,
+        "thin_cell_warning": null
+      }
+    },
+    {
+      "name": "Density",
+      "type": "continuous",
+      "mean": 1789.19,
+      "std": 3951.1,
+      "min": 1.0,
+      "max": 27000.0,
+      "missing_count": 0,
+      "missing_pct": 0.0,
+      "response_by_bin": [
+        {
+          "bin_index": 0,
+          "bin_lower": 1.0,
+          "bin_upper": 33.0,
+          "count": 40450,
+          "exposure": 24407.15,
+          "response_sum": 1856.0,
+          "response_rate": 0.076043
+        },
+        {
+          "bin_index": 1,
+          "bin_lower": 33.0,
+          "bin_upper": 67.0,
+          "count": 40707,
+          "exposure": 23655.25,
+          "response_sum": 2013.0,
+          "response_rate": 0.085097
+        },
+        {
+          "bin_index": 2,
+          "bin_lower": 67.0,
+          "bin_upper": 122.0,
+          "count": 40673,
+          "exposure": 22806.04,
+          "response_sum": 2006.0,
+          "response_rate": 0.087959
+        },
+        {
+          "bin_index": 3,
+          "bin_lower": 122.0,
+          "bin_upper": 214.0,
+          "count": 39466,
+          "exposure": 21488.73,
+          "response_sum": 2037.0,
+          "response_rate": 0.094794
+        },
+        {
+          "bin_index": 4,
+          "bin_lower": 214.0,
+          "bin_upper": 393.0,
+          "count": 41891,
+          "exposure": 22350.28,
+          "response_sum": 2086.0,
+          "response_rate": 0.093332
+        },
+        {
+          "bin_index": 5,
+          "bin_lower": 393.0,
+          "bin_upper": 713.0,
+          "count": 40284,
+          "exposure": 21448.45,
+          "response_sum": 2194.0,
+          "response_rate": 0.102292
+        },
+        {
+          "bin_index": 6,
+          "bin_lower": 713.0,
+          "bin_upper": 1313.0,
+          "count": 38329,
+          "exposure": 19616.5,
+          "response_sum": 2138.0,
+          "response_rate": 0.10899
+        },
+        {
+          "bin_index": 7,
+          "bin_lower": 1313.0,
+          "bin_upper": 2703.0,
+          "count": 43324,
+          "exposure": 21571.76,
+          "response_sum": 2413.0,
+          "response_rate": 0.111859
+        },
+        {
+          "bin_index": 8,
+          "bin_lower": 2703.0,
+          "bin_upper": 4128.0,
+          "count": 39091,
+          "exposure": 18251.37,
+          "response_sum": 2196.0,
+          "response_rate": 0.12032
+        },
+        {
+          "bin_index": 9,
+          "bin_lower": 4128.0,
+          "bin_upper": 27000.0,
+          "count": 42224,
+          "exposure": 19335.36,
+          "response_sum": 2469.0,
+          "response_rate": 0.127693
+        }
+      ],
+      "modeling_hints": {
+        "shape": "monotonic_increasing",
+        "recommendation": "linear or log",
+        "thin_cells": null,
+        "thin_cell_warning": null
+      }
+    },
+    {
+      "name": "VehPower",
+      "type": "categorical",
+      "n_levels": 12,
+      "n_levels_shown": 10,
+      "levels": [
+        {
+          "level": "6.0",
+          "count": 89117,
+          "exposure": 49438.09,
+          "exposure_pct": 23.0019,
+          "response_sum": 5022.0,
+          "response_rate": 0.101582
+        },
+        {
+          "level": "7.0",
+          "count": 87004,
+          "exposure": 46661.67,
+          "exposure_pct": 21.7101,
+          "response_sum": 4542.0,
+          "response_rate": 0.097339
+        },
+        {
+          "level": "5.0",
+          "count": 75071,
+          "exposure": 40959.99,
+          "exposure_pct": 19.0573,
+          "response_sum": 4242.0,
+          "response_rate": 0.103564
+        },
+        {
+          "level": "4.0",
+          "count": 68989,
+          "exposure": 35931.94,
+          "exposure_pct": 16.7179,
+          "response_sum": 3304.0,
+          "response_rate": 0.091952
+        },
+        {
+          "level": "8.0",
+          "count": 28230,
+          "exposure": 13672.92,
+          "exposure_pct": 6.3615,
+          "response_sum": 1161.0,
+          "response_rate": 0.084912
+        },
+        {
+          "level": "10.0",
+          "count": 18843,
+          "exposure": 9237.03,
+          "exposure_pct": 4.2977,
+          "response_sum": 1064.0,
+          "response_rate": 0.115189
+        },
+        {
+          "level": "9.0",
+          "count": 18060,
+          "exposure": 9162.9,
+          "exposure_pct": 4.2632,
+          "response_sum": 1059.0,
+          "response_rate": 0.115575
+        },
+        {
+          "level": "11.0",
+          "count": 11095,
+          "exposure": 5142.23,
+          "exposure_pct": 2.3925,
+          "response_sum": 563.0,
+          "response_rate": 0.109486
+        },
+        {
+          "level": "12.0",
+          "count": 4906,
+          "exposure": 2252.41,
+          "exposure_pct": 1.048,
+          "response_sum": 211.0,
+          "response_rate": 0.093678
+        },
+        {
+          "level": "_Other",
+          "count": 5124,
+          "exposure": 2471.71,
+          "exposure_pct": 1.15,
+          "response_sum": 240.0,
+          "response_rate": 0.097099
+        }
+      ],
+      "modeling_hints": {
+        "suggested_base_level": "6.0",
+        "ordinal": true,
+        "ordinal_pattern": "numeric",
+        "thin_levels": null,
+        "thin_level_warning": null
+      }
+    },
+    {
+      "name": "VehBrand",
+      "type": "categorical",
+      "n_levels": 11,
+      "n_levels_shown": 11,
+      "levels": [
+        {
+          "level": "B1",
+          "count": 97668,
+          "exposure": 57234.42,
+          "exposure_pct": 26.6292,
+          "response_sum": 5143.0,
+          "response_rate": 0.089859
+        },
+        {
+          "level": "B2",
+          "count": 95912,
+          "exposure": 56844.23,
+          "exposure_pct": 26.4477,
+          "response_sum": 5135.0,
+          "response_rate": 0.090335
+        },
+        {
+          "level": "B12",
+          "count": 99403,
+          "exposure": 38883.59,
+          "exposure_pct": 18.0912,
+          "response_sum": 5171.0,
+          "response_rate": 0.132987
+        },
+        {
+          "level": "B3",
+          "count": 32061,
+          "exposure": 17150.42,
+          "exposure_pct": 7.9795,
+          "response_sum": 1747.0,
+          "response_rate": 0.101863
+        },
+        {
+          "level": "B5",
+          "count": 20895,
+          "exposure": 12017.6,
+          "exposure_pct": 5.5914,
+          "response_sum": 1208.0,
+          "response_rate": 0.100519
+        },
+        {
+          "level": "B6",
+          "count": 17027,
+          "exposure": 9393.85,
+          "exposure_pct": 4.3706,
+          "response_sum": 859.0,
+          "response_rate": 0.091443
+        },
+        {
+          "level": "B4",
+          "count": 15088,
+          "exposure": 8239.36,
+          "exposure_pct": 3.8335,
+          "response_sum": 742.0,
+          "response_rate": 0.090056
+        },
+        {
+          "level": "B10",
+          "count": 10638,
+          "exposure": 5718.14,
+          "exposure_pct": 2.6605,
+          "response_sum": 510.0,
+          "response_rate": 0.08919
+        },
+        {
+          "level": "B11",
+          "count": 8061,
+          "exposure": 4064.79,
+          "exposure_pct": 1.8912,
+          "response_sum": 416.0,
+          "response_rate": 0.102342
+        },
+        {
+          "level": "B13",
+          "count": 7275,
+          "exposure": 4027.57,
+          "exposure_pct": 1.8739,
+          "response_sum": 378.0,
+          "response_rate": 0.093853
+        },
+        {
+          "level": "_Other",
+          "count": 2411,
+          "exposure": 1356.92,
+          "exposure_pct": 0.631329,
+          "response_sum": 99.0,
+          "response_rate": 0.072959
+        }
+      ],
+      "modeling_hints": {
+        "suggested_base_level": "B1",
+        "ordinal": true,
+        "ordinal_pattern": "prefix_numeric",
+        "thin_levels": null,
+        "thin_level_warning": null
+      }
+    },
+    {
+      "name": "VehGas",
+      "type": "categorical",
+      "n_levels": 2,
+      "n_levels_shown": 2,
+      "levels": [
+        {
+          "level": "Regular",
+          "count": 207225,
+          "exposure": 112390.29,
+          "exposure_pct": 52.2914,
+          "response_sum": 11472.0,
+          "response_rate": 0.102073
+        },
+        {
+          "level": "Diesel",
+          "count": 199214,
+          "exposure": 102540.61,
+          "exposure_pct": 47.7086,
+          "response_sum": 9936.0,
+          "response_rate": 0.096898
+        }
+      ],
+      "modeling_hints": {
+        "suggested_base_level": "Regular",
+        "ordinal": false,
+        "ordinal_pattern": null,
+        "thin_levels": null,
+        "thin_level_warning": null
+      }
+    },
+    {
+      "name": "Area",
+      "type": "categorical",
+      "n_levels": 6,
+      "n_levels_shown": 6,
+      "levels": [
+        {
+          "level": "C",
+          "count": 115158,
+          "exposure": 62693.52,
+          "exposure_pct": 29.1692,
+          "response_sum": 5937.0,
+          "response_rate": 0.094699
+        },
+        {
+          "level": "D",
+          "count": 90936,
+          "exposure": 46259.62,
+          "exposure_pct": 21.523,
+          "response_sum": 4981.0,
+          "response_rate": 0.107675
+        },
+        {
+          "level": "E",
+          "count": 82103,
+          "exposure": 38213.29,
+          "exposure_pct": 17.7793,
+          "response_sum": 4652.0,
+          "response_rate": 0.121738
+        },
+        {
+          "level": "A",
+          "count": 62417,
+          "exposure": 37146.86,
+          "exposure_pct": 17.2832,
+          "response_sum": 2917.0,
+          "response_rate": 0.078526
+        },
+        {
+          "level": "B",
+          "count": 45118,
+          "exposure": 25768.6,
+          "exposure_pct": 11.9892,
+          "response_sum": 2254.0,
+          "response_rate": 0.087471
+        },
+        {
+          "level": "F",
+          "count": 10707,
+          "exposure": 4849.01,
+          "exposure_pct": 2.2561,
+          "response_sum": 667.0,
+          "response_rate": 0.137554
+        }
+      ],
+      "modeling_hints": {
+        "suggested_base_level": "C",
+        "ordinal": true,
+        "ordinal_pattern": "alphabetic",
+        "thin_levels": null,
+        "thin_level_warning": null
+      }
+    },
+    {
+      "name": "Region",
+      "type": "categorical",
+      "n_levels": 21,
+      "n_levels_shown": 14,
+      "levels": [
+        {
+          "level": "Centre",
+          "count": 96404,
+          "exposure": 61624.29,
+          "exposure_pct": 28.6717,
+          "response_sum": 5420.0,
+          "response_rate": 0.087952
+        },
+        {
+          "level": "Rhone-Alpes",
+          "count": 50754,
+          "exposure": 27166.77,
+          "exposure_pct": 12.6398,
+          "response_sum": 3008.0,
+          "response_rate": 0.110724
+        },
+        {
+          "level": "Provence-Alpes-Cotes-D'Azur",
+          "count": 47362,
+          "exposure": 21355.34,
+          "exposure_pct": 9.9359,
+          "response_sum": 2317.0,
+          "response_rate": 0.108497
+        },
+        {
+          "level": "Ile-de-France",
+          "count": 41804,
+          "exposure": 18109.61,
+          "exposure_pct": 8.4258,
+          "response_sum": 2357.0,
+          "response_rate": 0.130152
+        },
+        {
+          "level": "Bretagne",
+          "count": 25444,
+          "exposure": 16746.97,
+          "exposure_pct": 7.7918,
+          "response_sum": 1600.0,
+          "response_rate": 0.09554
+        },
+        {
+          "level": "Pays-de-la-Loire",
+          "count": 23339,
+          "exposure": 13243.3,
+          "exposure_pct": 6.1617,
+          "response_sum": 1240.0,
+          "response_rate": 0.093632
+        },
+        {
+          "level": "Nord-Pas-de-Calais",
+          "count": 24081,
+          "exposure": 11774.8,
+          "exposure_pct": 5.4784,
+          "response_sum": 1050.0,
+          "response_rate": 0.089174
+        },
+        {
+          "level": "Languedoc-Roussillon",
+          "count": 21388,
+          "exposure": 8781.25,
+          "exposure_pct": 4.0856,
+          "response_sum": 902.0,
+          "response_rate": 0.102719
+        },
+        {
+          "level": "Aquitaine",
+          "count": 18645,
+          "exposure": 8481.56,
+          "exposure_pct": 3.9462,
+          "response_sum": 802.0,
+          "response_rate": 0.094558
+        },
+        {
+          "level": "Poitou-Charentes",
+          "count": 11400,
+          "exposure": 6697.88,
+          "exposure_pct": 3.1163,
+          "response_sum": 577.0,
+          "response_rate": 0.086147
+        },
+        {
+          "level": "Midi-Pyrenees",
+          "count": 10356,
+          "exposure": 4255.99,
+          "exposure_pct": 1.9802,
+          "response_sum": 388.0,
+          "response_rate": 0.091166
+        },
+        {
+          "level": "Basse-Normandie",
+          "count": 6581,
+          "exposure": 3999.39,
+          "exposure_pct": 1.8608,
+          "response_sum": 356.0,
+          "response_rate": 0.089014
+        },
+        {
+          "level": "Bourgogne",
+          "count": 6251,
+          "exposure": 2989.63,
+          "exposure_pct": 1.391,
+          "response_sum": 286.0,
+          "response_rate": 0.095664
+        },
+        {
+          "level": "_Other",
+          "count": 22630,
+          "exposure": 9704.13,
+          "exposure_pct": 4.515,
+          "response_sum": 1105.0,
+          "response_rate": 0.113869
+        }
+      ],
+      "modeling_hints": {
+        "suggested_base_level": "Centre",
+        "ordinal": false,
+        "ordinal_pattern": null,
+        "thin_levels": null,
+        "thin_level_warning": null
+      }
+    }
+  ],
+  "missing_values": {
+    "total_rows": 406439,
+    "factors_with_missing": [],
+    "n_complete_rows": 406439,
+    "summary": "No missing values"
+  },
+  "univariate_tests": [
+    {
+      "factor": "IDpol",
+      "type": "continuous",
+      "test": "correlation_f_test",
+      "correlation": -0.063866,
+      "r_squared": 0.004079,
+      "f_statistic": 1664.62,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "VehAge",
+      "type": "continuous",
+      "test": "correlation_f_test",
+      "correlation": -0.027865,
+      "r_squared": 0.000776,
+      "f_statistic": 315.82,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "BonusMalus",
+      "type": "continuous",
+      "test": "correlation_f_test",
+      "correlation": 0.053867,
+      "r_squared": 0.002902,
+      "f_statistic": 1182.79,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "Density",
+      "type": "continuous",
+      "test": "correlation_f_test",
+      "correlation": 0.014691,
+      "r_squared": 0.000216,
+      "f_statistic": 87.74,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "VehBrand",
+      "type": "categorical",
+      "test": "anova_f_test",
+      "n_levels": 11,
+      "eta_squared": 0.000516,
+      "f_statistic": 20.9938,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "Area",
+      "type": "categorical",
+      "test": "anova_f_test",
+      "n_levels": 6,
+      "eta_squared": 0.000459,
+      "f_statistic": 37.2975,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "Region",
+      "type": "categorical",
+      "test": "anova_f_test",
+      "n_levels": 21,
+      "eta_squared": 0.000367,
+      "f_statistic": 7.4681,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "DrivAge",
+      "type": "continuous",
+      "test": "correlation_f_test",
+      "correlation": -0.009227,
+      "r_squared": 8.5e-05,
+      "f_statistic": 34.6094,
+      "pvalue": 0.0,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "VehPower",
+      "type": "categorical",
+      "test": "anova_f_test",
+      "n_levels": 12,
+      "eta_squared": 0.000103,
+      "f_statistic": 3.8035,
+      "pvalue": 1.7e-05,
+      "significant_01": true,
+      "significant_05": true
+    },
+    {
+      "factor": "VehGas",
+      "type": "categorical",
+      "test": "anova_f_test",
+      "n_levels": 2,
+      "eta_squared": 1.3e-05,
+      "f_statistic": 5.2974,
+      "pvalue": 0.021357,
+      "significant_01": false,
+      "significant_05": true
+    }
+  ],
+  "correlations": {
+    "factors": [
+      "IDpol",
+      "VehAge",
+      "DrivAge",
+      "BonusMalus",
+      "Density"
+    ],
+    "matrix": [
+      [
+        1.0,
+        -0.156296,
+        0.062552,
+        -0.004121,
+        0.069113
+      ],
+      [
+        -0.156296,
+        1.0,
+        -0.059363,
+        0.078811,
+        -0.089092
+      ],
+      [
+        0.062552,
+        -0.059363,
+        1.0,
+        -0.479854,
+        -0.006269
+      ],
+      [
+        -0.004121,
+        0.078811,
+        -0.479854,
+        1.0,
+        0.079109
+      ],
+      [
+        0.069113,
+        -0.089092,
+        -0.006269,
+        0.079109,
+        1.0
+      ]
+    ],
+    "high_correlations": []
+  },
+  "cramers_v": {
+    "factors": [
+      "VehPower",
+      "VehBrand",
+      "VehGas",
+      "Area",
+      "Region"
+    ],
+    "matrix": [
+      [
+        1.0,
+        0.157609,
+        0.318624,
+        0.039547,
+        0.043475
+      ],
+      [
+        0.157609,
+        1.0,
+        0.114996,
+        0.072441,
+        0.129495
+      ],
+      [
+        0.318624,
+        0.114996,
+        1.0,
+        0.130146,
+        0.086993
+      ],
+      [
+        0.039547,
+        0.072441,
+        0.130146,
+        1.0,
+        0.318342
+      ],
+      [
+        0.043475,
+        0.129495,
+        0.086993,
+        0.318342,
+        1.0
+      ]
+    ],
+    "high_associations": [
+      {
+        "factor1": "VehPower",
+        "factor2": "VehGas",
+        "cramers_v": 0.318624,
+        "severity": "moderate"
+      },
+      {
+        "factor1": "Area",
+        "factor2": "Region",
+        "cramers_v": 0.318342,
+        "severity": "moderate"
+      }
+    ]
+  },
+  "vif": [
+    {
+      "factor": "BonusMalus",
+      "vif": 1.3162,
+      "severity": "none"
+    },
+    {
+      "factor": "DrivAge",
+      "vif": 1.3068,
+      "severity": "none"
+    },
+    {
+      "factor": "VehAge",
+      "vif": 1.0394,
+      "severity": "none"
+    },
+    {
+      "factor": "IDpol",
+      "vif": 1.0326,
+      "severity": "none"
+    },
+    {
+      "factor": "Density",
+      "vif": 1.0197,
+      "severity": "none"
+    }
+  ],
+  "zero_inflation": {
+    "observed_zeros": 385930,
+    "observed_zero_pct": 94.954,
+    "expected_zero_pct_poisson": 94.8691,
+    "excess_zero_pct": 0.084876,
+    "severity": "none",
+    "recommendation": "Standard Poisson/NegBin likely adequate"
+  },
+  "overdispersion": {
+    "mean_count": 0.052672,
+    "var_count": 0.055153,
+    "dispersion_ratio": 1.0471,
+    "severity": "none",
+    "recommendation": "Poisson assumption reasonable"
+  },
+  "interaction_candidates": [
+    {
+      "factor1": "IDpol",
+      "factor2": "VehAge",
+      "interaction_strength": 0.011515,
+      "pvalue": 0.0,
+      "n_cells": 25,
+      "current_terms": null,
+      "recommendation": null
+    },
+    {
+      "factor1": "IDpol",
+      "factor2": "BonusMalus",
+      "interaction_strength": 0.00742,
+      "pvalue": 0.0,
+      "n_cells": 15,
+      "current_terms": null,
+      "recommendation": null
+    },
+    {
+      "factor1": "BonusMalus",
+      "factor2": "VehAge",
+      "interaction_strength": 0.003354,
+      "pvalue": 0.0,
+      "n_cells": 15,
+      "current_terms": null,
+      "recommendation": null
+    }
+  ],
+  "response_stats": {
+    "n_observations": 406439,
+    "total_exposure": 214930.9,
+    "total_response": 21408.0,
+    "mean_response": 0.052672,
+    "mean_rate": 0.254993,
+    "std_rate": 4.2144,
+    "min": 0.0,
+    "max": 11.0,
+    "zeros_count": 385930,
+    "zeros_pct": 94.954,
+    "p1": 0.0,
+    "p5": 0.0,
+    "p10": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.0,
+    "p90": 0.0,
+    "p95": 1.0,
+    "p99": 4.0816
+  }
+}
