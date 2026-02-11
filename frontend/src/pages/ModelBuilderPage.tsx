@@ -13,7 +13,6 @@ import {
   Minus,
   Play,
   Loader2,
-  CheckCircle2,
   AlertTriangle,
   BarChart3,
   TableProperties,
@@ -35,9 +34,12 @@ import type {
   MenuItem,
   ExplorationData,
   FitResult,
+  FactorDiagnostic,
 } from "@/types";
 import { TERM_COLORS } from "@/types";
 import { FactorChartsPanel } from "@/components/charts";
+import ModelPanel from "@/components/ModelPanel";
+import DataPanel from "@/components/DataPanel";
 import ContextMenu from "@/components/ui/ContextMenu";
 
 export default function ModelBuilderPage() {
@@ -167,10 +169,11 @@ export default function ModelBuilderPage() {
         family: config.family,
         exposure: config.offset ?? undefined,
         split: config.split ?? undefined,
+        project_id: config.projectId ?? undefined,
       }),
     })
       .then((res) => res.ok ? res.json() : null)
-      .then((data) => { if (data) setExploration(data); })
+      .then((data) => { if (data) { setExploration(data); fetchHistory(); } })
       .catch(() => {})
       .finally(() => setExplorationLoading(false));
   }, [config]);
@@ -200,6 +203,48 @@ export default function ModelBuilderPage() {
 
   const numericCount = availableFactors.filter((c) => c.is_numeric).length;
   const categoricalCount = availableFactors.filter((c) => c.is_categorical).length;
+
+  type FactorBadge = {
+    diag: FactorDiagnostic;
+    /** For fitted: actual % deviance reduction (dev_contrib / current deviance) */
+    devPct?: number;
+    /** For fitted: relative importance among fitted factors (sums to 100%) */
+    relImportance?: number;
+    /** For unfitted: expected % deviance improvement from score test */
+    expectedPct?: number;
+  };
+
+  const factorBadgeMap = useMemo(() => {
+    const map = new Map<string, FactorBadge>();
+
+    // Use fit diagnostics if available, otherwise fall back to null model from exploration
+    const factors = fitResult?.diagnostics?.factors ?? exploration?.null_diagnostics?.factors;
+    if (!factors) return map;
+
+    // Current model deviance for computing expected % improvement from score tests
+    const currentDev = fitResult?.deviance
+      ?? exploration?.null_diagnostics?.train_test?.train?.deviance
+      ?? null;
+
+    for (const f of factors) {
+      const badge: FactorBadge = { diag: f };
+
+      if (f.significance && currentDev && currentDev > 0) {
+        badge.devPct = (f.significance.dev_contrib / currentDev) * 100;
+      }
+
+      if (f.relative_importance != null) {
+        badge.relImportance = f.relative_importance;
+      }
+
+      if (f.score_test && currentDev && currentDev > 0) {
+        badge.expectedPct = (f.score_test.statistic / currentDev) * 100;
+      }
+
+      map.set(f.name, badge);
+    }
+    return map;
+  }, [fitResult?.diagnostics?.factors, fitResult?.deviance, exploration?.null_diagnostics?.factors, exploration?.null_diagnostics?.train_test?.train?.deviance]);
 
   const addTerm = useCallback((spec: TermSpec) => {
     setTerms((prev) => {
@@ -639,7 +684,19 @@ export default function ModelBuilderPage() {
               </p>
             ) : (
               <div className="space-y-0.5">
-                {filteredFactors.map((col, i) => {
+                {[...filteredFactors].sort((a, b) => {
+                  const ba = factorBadgeMap.get(a.name);
+                  const bb = factorBadgeMap.get(b.name);
+                  // Fitted factors first (sorted by devPct desc)
+                  const aFitted = ba?.devPct != null ? 1 : 0;
+                  const bFitted = bb?.devPct != null ? 1 : 0;
+                  if (aFitted !== bFitted) return bFitted - aFitted;
+                  if (aFitted && bFitted) return (bb!.devPct! - ba!.devPct!);
+                  // Then unfitted by expected improvement (higher = better)
+                  const aExp = ba?.expectedPct ?? 0;
+                  const bExp = bb?.expectedPct ?? 0;
+                  return bExp - aExp;
+                }).map((col, i) => {
                   const colTerms = termsForColumn(col.name);
                   return (
                     <div key={col.name} style={{ animation: `fadeUp 0.3s ease-out ${0.03 * i}s both` }}>
@@ -674,9 +731,48 @@ export default function ModelBuilderPage() {
                             )}
                           </p>
                         </div>
-                        <span className="text-[0.55rem] text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/30">
-                          right-click
-                        </span>
+                        {(() => {
+                          const fb = factorBadgeMap.get(col.name);
+                          if (fb?.diag.score_test) {
+                            const st = fb.diag.score_test;
+                            const ep = fb.expectedPct;
+                            return (
+                              <span
+                                className={cn(
+                                  "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
+                                  st.significant && ep != null && ep >= 0.5 ? "bg-emerald-500/15 text-emerald-400"
+                                    : st.significant ? "bg-emerald-500/8 text-emerald-400/60"
+                                    : "bg-white/[0.04] text-muted-foreground/30"
+                                )}
+                                title={`Score test: χ²=${st.statistic.toFixed(1)}, df=${st.df}, p=${st.pvalue < 0.0001 ? "<0.0001" : st.pvalue.toFixed(4)}`}
+                              >
+                                {st.significant && ep != null
+                                  ? ep >= 0.1 ? `~${ep.toFixed(1)}%` : `~${ep.toFixed(2)}%`
+                                  : "ns"}
+                              </span>
+                            );
+                          }
+                          if (fb?.devPct != null) {
+                            return (
+                              <span
+                                className={cn(
+                                  "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
+                                  fb.devPct >= 1 ? "bg-blue-500/15 text-blue-400"
+                                    : fb.devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70"
+                                    : "bg-white/[0.04] text-muted-foreground/40"
+                                )}
+                                title={`Deviance reduction: ${fb.devPct.toFixed(2)}%${fb.relImportance != null ? ` · Relative importance: ${fb.relImportance.toFixed(1)}%` : ""} (Δdev=${fb.diag.significance!.dev_contrib.toFixed(1)})`}
+                              >
+                                {fb.devPct >= 0.1 ? `${fb.devPct.toFixed(1)}%` : `${fb.devPct.toFixed(2)}%`}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="text-[0.55rem] text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/30">
+                              right-click
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       {/* Fitted terms for this factor */}
@@ -725,8 +821,8 @@ export default function ModelBuilderPage() {
 
         {/* Main content area */}
         <main className="flex flex-1 flex-col overflow-hidden">
-          {/* Tab bar — show when we have terms or fit results */}
-          {(fitResult || terms.length > 0) && (
+          {/* Tab bar — show as soon as we have any data (exploration, fit, or terms) */}
+          {(exploration || fitResult || terms.length > 0) && (
             <div className="flex shrink-0 items-center gap-1 border-b border-white/[0.06] px-4 py-2">
               <TabButton
                 active={activeTab === "charts"}
@@ -734,12 +830,20 @@ export default function ModelBuilderPage() {
                 icon={<BarChart3 className="h-3.5 w-3.5" />}
                 label="Charts"
               />
-              {fitResult && (
+              {exploration && (
                 <TabButton
-                  active={activeTab === "summary"}
-                  onClick={() => setActiveTab("summary")}
+                  active={activeTab === "data"}
+                  onClick={() => setActiveTab("data")}
+                  icon={<Columns3 className="h-3.5 w-3.5" />}
+                  label="Data"
+                />
+              )}
+              {(fitResult || exploration?.null_diagnostics) && (
+                <TabButton
+                  active={activeTab === "model"}
+                  onClick={() => setActiveTab("model")}
                   icon={<TableProperties className="h-3.5 w-3.5" />}
-                  label="Summary"
+                  label="Model"
                 />
               )}
               {history.length > 0 && (
@@ -761,8 +865,71 @@ export default function ModelBuilderPage() {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
-            {activeTab === "code" && config && terms.length > 0 ? (
+            {explorationLoading && !exploration ? (
+              <div className="flex flex-1 items-center justify-center p-6 h-full">
+                <div className="flex flex-col items-center gap-8" style={{ animation: "fadeUp 0.6s ease-out both" }}>
+                  {/* Animated rings */}
+                  <div className="relative flex h-24 w-24 items-center justify-center">
+                    <div
+                      className="absolute inset-0 rounded-full border border-primary/20"
+                      style={{ animation: "pulseRing 2.4s ease-out infinite" }}
+                    />
+                    <div
+                      className="absolute inset-[-8px] rounded-full border border-primary/10"
+                      style={{ animation: "pulseRing 2.4s ease-out 0.6s infinite" }}
+                    />
+                    <div
+                      className="absolute inset-[-16px] rounded-full border border-primary/5"
+                      style={{ animation: "pulseRing 2.4s ease-out 1.2s infinite" }}
+                    />
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/[0.08] backdrop-blur-sm">
+                      <div
+                        className="text-primary"
+                        style={{ animation: "gentlePulse 2s ease-in-out infinite" }}
+                      >
+                        <BarChart3 className="h-7 w-7" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text */}
+                  <div className="flex flex-col items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground/80">
+                      Initialising project
+                    </p>
+                    <p className="text-xs text-muted-foreground/40 text-center max-w-[240px]">
+                      Analysing dataset, computing factor statistics &amp; fitting null model
+                    </p>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="w-48 overflow-hidden rounded-full bg-white/[0.04]">
+                    <div className="h-[3px] w-1/3 rounded-full bg-gradient-to-r from-transparent via-primary/60 to-transparent"
+                      style={{ animation: "progressSlide 1.8s ease-in-out infinite" }}
+                    />
+                  </div>
+
+                  {/* Steps */}
+                  <div className="flex flex-col gap-2">
+                    {["Loading & splitting data", "Computing univariate statistics", "Fitting null model & diagnostics"].map((step, i) => (
+                      <div
+                        key={step}
+                        className="flex items-center gap-2.5"
+                        style={{ animation: `stepReveal 0.4s ease-out ${0.3 + i * 0.2}s both` }}
+                      >
+                        <div className="flex h-4 w-4 items-center justify-center">
+                          <Loader2 className="h-3 w-3 animate-spin text-primary/50" />
+                        </div>
+                        <span className="text-[0.7rem] text-muted-foreground/40">{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : activeTab === "code" && config ? (
               <CodePanel config={config} terms={terms} />
+            ) : activeTab === "data" && exploration ? (
+              <DataPanel exploration={exploration} />
             ) : activeTab === "history" ? (
               <HistoryPanel
                 history={history}
@@ -771,8 +938,8 @@ export default function ModelBuilderPage() {
                 onRestore={handleRestoreVersion}
                 restoring={restoring}
               />
-            ) : fitResult && activeTab === "summary" ? (
-              <FitResultsPanel result={fitResult} />
+            ) : activeTab === "model" && (fitResult || exploration?.null_diagnostics) ? (
+              <ModelPanel result={fitResult} nullDiagnostics={exploration?.null_diagnostics} />
             ) : fitError ? (
               <div className="flex flex-1 items-center justify-center p-6">
                 <div className="max-w-md text-center" style={{ animation: "fadeUp 0.4s ease-out both" }}>
@@ -790,6 +957,9 @@ export default function ModelBuilderPage() {
                 diagnostics={fitResult?.diagnostics ?? null}
                 colMeta={availableFactors.find((f) => f.name === selectedFactor) ?? null}
                 explorationLoading={explorationLoading}
+                factorDiag={factorBadgeMap.get(selectedFactor)?.diag ?? null}
+                expectedPct={factorBadgeMap.get(selectedFactor)?.expectedPct}
+                devPct={factorBadgeMap.get(selectedFactor)?.devPct}
               />
             ) : (
               <div className="flex flex-1 items-center justify-center p-6">
@@ -832,102 +1002,6 @@ export default function ModelBuilderPage() {
 }
 
 /* ---- Context Menu ---- */
-
-function fmt(v: number | null | undefined, dp = 4): string {
-  if (v == null) return "—";
-  return v.toFixed(dp);
-}
-
-function FitResultsPanel({ result }: { result: FitResult }) {
-  return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ animation: "fadeUp 0.4s ease-out both" }}>
-      {/* Success header */}
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
-          <CheckCircle2 className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">Model fitted successfully</p>
-          <p className="text-[0.7rem] text-muted-foreground/50">
-            {result.n_obs.toLocaleString()} observations &middot; {result.n_params} parameters &middot; {result.fit_duration_ms}ms
-          </p>
-        </div>
-      </div>
-
-      {/* Summary stats */}
-      <div className="mb-6 grid grid-cols-4 gap-3">
-        <StatCard label="Deviance" value={fmt(result.deviance, 2)} />
-        <StatCard label="Null Deviance" value={fmt(result.null_deviance, 2)} />
-        <StatCard label="AIC" value={fmt(result.aic, 2)} />
-        <StatCard label="BIC" value={fmt(result.bic, 2)} />
-      </div>
-
-      {/* Coefficient table */}
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
-        <div className="border-b border-white/[0.06] px-4 py-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-            Coefficients ({result.coef_table.length})
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.06] text-[0.65rem] uppercase tracking-wider text-muted-foreground/40">
-                <th className="px-4 py-2.5 text-left font-semibold">Parameter</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Estimate</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Std Error</th>
-                <th className="px-4 py-2.5 text-right font-semibold">z-value</th>
-                <th className="px-4 py-2.5 text-right font-semibold">P(&gt;|z|)</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Sig</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.coef_table.map((row, i) => {
-                const sig = row.pvalue != null
-                  ? row.pvalue < 0.001 ? "***" : row.pvalue < 0.01 ? "**" : row.pvalue < 0.05 ? "*" : row.pvalue < 0.1 ? "." : ""
-                  : "";
-                return (
-                  <tr
-                    key={row.name}
-                    className={cn(
-                      "border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]",
-                      i % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
-                    )}
-                    style={{ animation: `fadeUp 0.2s ease-out ${0.02 * i}s both` }}
-                  >
-                    <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{row.name}</td>
-                    <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-foreground">{fmt(row.coef, 6)}</td>
-                    <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.se, 6)}</td>
-                    <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.z, 3)}</td>
-                    <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.pvalue, 4)}</td>
-                    <td className={cn(
-                      "px-4 py-2 text-right font-mono text-[0.75rem] font-bold",
-                      sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400/70" : sig.includes("*") ? "text-blue-400/60" : "text-muted-foreground/30"
-                    )}>
-                      {sig || ""}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="border-t border-white/[0.06] px-4 py-2 text-[0.6rem] text-muted-foreground/30">
-          Signif. codes: *** 0.001 ** 0.01 * 0.05 . 0.1
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-      <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/40">{label}</p>
-      <p className="mt-1 font-mono text-lg font-semibold text-foreground">{value}</p>
-    </div>
-  );
-}
 
 function generateRustystatsCode(config: ModelConfig, terms: TermSpec[]): string {
   const lines: string[] = [

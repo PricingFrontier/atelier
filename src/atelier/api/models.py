@@ -162,8 +162,10 @@ def _extract_split_metrics(diag_json: str | None, split: str) -> SplitMetrics:
         if not data:
             return SplitMetrics()
         n_obs = data.get("n_obs")
-        deviance = data.get("deviance")
-        mean_dev = round(deviance / n_obs, 6) if deviance is not None and n_obs else None
+        mean_dev = data.get("loss")
+        if mean_dev is None:
+            deviance = data.get("deviance")
+            mean_dev = round(deviance / n_obs, 6) if deviance is not None and n_obs else None
         return SplitMetrics(
             n_obs=n_obs,
             mean_deviance=mean_dev,

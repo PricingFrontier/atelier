@@ -6,7 +6,7 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.13"
 dependencies = [
-    "rustystats>=0.4.2",
+    "rustystats>=0.4.4",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "python-multipart>=0.0.18",
@@ -30,6 +30,13 @@ packages = ["src/atelier"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/atelier/static" = "atelier/static"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]
 
 [project.optional-dependencies]
 dev = [

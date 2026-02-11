@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { Hash, Type, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ColumnMeta, ExplorationData, DiagnosticsData } from "@/types";
+import type { ColumnMeta, ExplorationData, DiagnosticsData, FactorDiagnostic } from "@/types";
 import FactorChart from "./FactorChart";
 
 export default function FactorChartsPanel({
@@ -14,12 +14,20 @@ export default function FactorChartsPanel({
   diagnostics,
   colMeta,
   explorationLoading,
+  factorDiag,
+  expectedPct,
+  devPct,
 }: {
   selectedFactor: string;
   exploration: ExplorationData | null;
   diagnostics: DiagnosticsData | null;
   colMeta: ColumnMeta | null;
   explorationLoading: boolean;
+  factorDiag: FactorDiagnostic | null;
+  /** For unfitted: expected % deviance improvement from score test */
+  expectedPct?: number;
+  /** For fitted: % of total deviance reduction this factor explains */
+  devPct?: number;
 }) {
   const [diagSet, setDiagSet] = useState<"train" | "validation">("train");
 
@@ -157,6 +165,9 @@ export default function FactorChartsPanel({
         />
       )}
 
+      {/* Factor diagnostic info panels — below the charts */}
+      {factorDiag && <FactorDiagInfo diag={factorDiag} expectedPct={expectedPct} devPct={devPct} />}
+
       {/* Loading state */}
       {explorationLoading && !factorStat && !hasDiag && (
         <div className="flex items-center justify-center py-12">
@@ -170,6 +181,161 @@ export default function FactorChartsPanel({
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
           <p className="text-sm text-muted-foreground/50">No data available for this factor</p>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Factor diagnostic info panels ────────────────────── */
+
+function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic; expectedPct?: number; devPct?: number }) {
+  return (
+    <div className="space-y-4">
+      {/* Score test banner — unfitted factors */}
+      {diag.score_test && (
+        <div className={cn(
+          "rounded-xl border p-4",
+          diag.score_test.significant
+            ? "border-emerald-500/20 bg-emerald-500/[0.04]"
+            : "border-white/[0.06] bg-white/[0.02]"
+        )}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground/80">
+                Rao Score Test
+                {expectedPct != null && diag.score_test.significant && (
+                  <span className={cn(
+                    "ml-2 rounded-full px-2 py-0.5 text-[0.6rem] font-bold",
+                    expectedPct >= 1 ? "bg-emerald-500/15 text-emerald-400" : "bg-emerald-500/8 text-emerald-400/60"
+                  )}>
+                    ~{expectedPct >= 0.1 ? expectedPct.toFixed(1) : expectedPct.toFixed(2)}% expected improvement
+                  </span>
+                )}
+                {!diag.score_test.significant && (
+                  <span className="ml-2 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold bg-white/[0.06] text-muted-foreground/50">
+                    Not significant
+                  </span>
+                )}
+              </p>
+              <p className="mt-1 text-[0.65rem] text-muted-foreground/50">
+                {diag.score_test.significant
+                  ? expectedPct != null && expectedPct >= 1
+                    ? "Strong candidate — expected to meaningfully reduce deviance"
+                    : "Adding this factor would significantly improve the model"
+                  : "This factor may not improve the model significantly"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-sm font-semibold text-foreground">
+                χ² = {diag.score_test.statistic.toFixed(2)}
+              </p>
+              <p className="text-[0.6rem] text-muted-foreground/40">
+                df={diag.score_test.df}, p={diag.score_test.pvalue < 0.0001 ? "<0.0001" : diag.score_test.pvalue.toFixed(4)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Significance — fitted factors */}
+      {diag.significance && (
+        <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground/80">
+                Factor Significance
+                {devPct != null && (
+                  <span className={cn(
+                    "ml-2 rounded-full px-2 py-0.5 text-[0.6rem] font-bold",
+                    devPct >= 1 ? "bg-blue-500/15 text-blue-400" : devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70" : "bg-white/[0.06] text-muted-foreground/50"
+                  )}>
+                    {devPct >= 0.1 ? `${devPct.toFixed(1)}% deviance reduction` : `${devPct.toFixed(2)}% deviance reduction`}
+                  </span>
+                )}
+              </p>
+              <p className="mt-1 text-[0.65rem] text-muted-foreground/50">
+                {devPct != null && devPct >= 2
+                  ? "Major contributor — significantly reduces model deviance"
+                  : devPct != null && devPct >= 0.5
+                    ? "Moderate contributor to model fit"
+                    : "Minor contributor to model fit"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-sm font-semibold text-foreground">
+                {devPct != null ? `${devPct.toFixed(2)}%` : `Δ${diag.significance.dev_contrib.toFixed(0)}`}
+              </p>
+              <p className="text-[0.6rem] text-muted-foreground/40">
+                χ²={diag.significance.chi2.toFixed(2)}, p={diag.significance.p < 0.0001 ? "<0.0001" : diag.significance.p.toFixed(4)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Residual pattern */}
+      {diag.residual_pattern && diag.residual_pattern.var_explained > 0.001 && (
+        <div className="rounded-xl border border-amber-500/15 bg-amber-500/[0.03] p-4">
+          <p className="text-xs font-semibold text-amber-400/80">Residual Pattern Detected</p>
+          <p className="mt-1 text-[0.65rem] text-muted-foreground/50">
+            Residual correlation: {diag.residual_pattern.resid_corr.toFixed(4)} · Variance explained: {(diag.residual_pattern.var_explained * 100).toFixed(3)}%
+          </p>
+        </div>
+      )}
+
+      {/* Coefficients / relativities table — fitted factors */}
+      {diag.coefficients && diag.coefficients.length > 0 && (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
+          <div className="border-b border-white/[0.06] px-4 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+              Relativities
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.06] text-[0.65rem] uppercase tracking-wider text-muted-foreground/40">
+                  <th className="px-4 py-2 text-left font-semibold">Term</th>
+                  <th className="px-4 py-2 text-right font-semibold">Estimate</th>
+                  <th className="px-4 py-2 text-right font-semibold">Relativity</th>
+                  <th className="px-4 py-2 text-right font-semibold">P-value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {diag.coefficients.map((c, i) => (
+                  <tr
+                    key={c.term}
+                    className={cn(
+                      "border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]",
+                      i % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
+                    )}
+                  >
+                    <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/70">{c.term}</td>
+                    <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground/60">
+                      {c.estimate.toFixed(6)}
+                    </td>
+                    <td className={cn(
+                      "px-4 py-1.5 text-right font-mono text-[0.7rem] font-semibold",
+                      c.relativity > 1.05 ? "text-red-400/80" : c.relativity < 0.95 ? "text-emerald-400/80" : "text-foreground/60"
+                    )}>
+                      {c.relativity.toFixed(4)}
+                    </td>
+                    <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground/50">
+                      {c.p_value < 0.0001 ? "<0.0001" : c.p_value.toFixed(4)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Transform info */}
+      {diag.transform && (
+        <p className="text-[0.6rem] text-muted-foreground/40">
+          Transform: <span className="font-mono text-foreground/50">{diag.transform}</span>
+        </p>
       )}
     </div>
   );

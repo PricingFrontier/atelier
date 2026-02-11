@@ -2,6 +2,8 @@
  * Exploration types — from rs.explore_data() response.
  */
 
+import type { DiagnosticsData } from "./diagnostics";
+
 export interface ExploreResponseBin {
   bin_index: number;
   bin_lower: number;
@@ -52,4 +54,5 @@ export interface ExplorationData {
   zero_inflation?: any;
   overdispersion?: any;
   response_stats?: any;
+  null_diagnostics?: DiagnosticsData | null;
 }

@@ -32,5 +32,8 @@ class ExploreRequest(BaseModel):
     dataset_path: str
     response: str
     family: str = "poisson"
+    link: str | None = None
     exposure: str | None = None
+    weights: str | None = None
     split: SplitSpec | None = None
+    project_id: str | None = None

@@ -65,6 +65,13 @@ dev = [
     { name = "pytest-asyncio" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20.0" },
@@ -76,12 +83,19 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
     { name = "python-multipart", specifier = ">=0.0.18" },
-    { name = "rustystats", specifier = ">=0.4.2" },
+    { name = "rustystats", specifier = ">=0.4.4" },
     { name = "sqlalchemy", specifier = ">=2.0.36" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.0" },
     { name = "websockets", specifier = ">=14.0" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
+]
 
 [[package]]
 name = "certifi"
@@ -497,15 +511,15 @@ wheels = [
 
 [[package]]
 name = "rustystats"
-version = "0.4.2"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "polars" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/a1/b7f87fa50125848c4ea1105ffcf1de8798e32786b9ae10ace375808950ea/rustystats-0.4.2.tar.gz", hash = "sha256:bcef4cbb2c2b5131d5bfc98b1ec6dba4fbf9426c19c021a24342a3e1d5542b2e", size = 290017, upload-time = "2026-02-10T09:25:30.388Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/c1/f647e932352cf17c0f391e3e09963b10dc580278a96a7934e200e0c772d9/rustystats-0.4.4.tar.gz", hash = "sha256:bd3a579357813534a23309ec6ceac9e4e770f3dfbb2c4a4e8ceacffeae7030bd", size = 290072, upload-time = "2026-02-11T06:49:25.234Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/45/85c6f6ebc870fb3baaf35b72d5b3f961c62ff3e426adfeb6ddac914cfe2d/rustystats-0.4.2-cp313-cp313-manylinux_2_35_x86_64.whl", hash = "sha256:875c2905fe561c477cf77a41ed82922a7822fe052c9be952aff083f7f0358f80", size = 1090656, upload-time = "2026-02-10T09:25:27.825Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/f8/ccbd5270ef8a0be0329f526d65c043038313fd6306669034274e5cfaa974/rustystats-0.4.4-cp313-cp313-manylinux_2_35_x86_64.whl", hash = "sha256:6b64d657a2f447d9129cd76ff7db42f58691c7d38204b73ac784800b6cc43f4e", size = 1090688, upload-time = "2026-02-11T06:49:22.586Z" },
 ]
 
 [[package]]

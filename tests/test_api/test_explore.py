@@ -151,3 +151,27 @@ class TestExploreEndpoint:
         summary = data["data_summary"]
         assert summary["n_rows"] == 200
         assert summary["response_column"] == "ClaimNb"
+
+    async def test_null_diagnostics_present(self, client, sample_csv_path):
+        """Exploration should fit a null model and return score tests for all factors."""
+        path = await self._upload(client, sample_csv_path)
+        resp = await client.post("/api/explore", json={
+            "dataset_path": path,
+            "response": "ClaimNb",
+            "family": "poisson",
+            "exposure": "Exposure",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "null_diagnostics" in data
+        assert data["null_diagnostics"] is not None
+        # Should have factors with score tests
+        factors = data["null_diagnostics"]["factors"]
+        assert len(factors) > 0
+        # Every factor from a null model should be unfitted and have a score_test
+        for f in factors:
+            assert f["in_model"] is False
+            assert f["score_test"] is not None
+            assert "statistic" in f["score_test"]
+            assert "pvalue" in f["score_test"]
+            assert "significant" in f["score_test"]
