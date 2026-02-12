@@ -1,5 +1,5 @@
 [project]
-name = "atelier"
+name = "atel"
 version = "0.1.0"
 description = "Browser-based GLM workbench for actuarial pricing"
 readme = "README.md"
@@ -29,8 +29,6 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/atelier"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"src/atelier/static" = "atelier/static"
 
 [dependency-groups]
 dev = [

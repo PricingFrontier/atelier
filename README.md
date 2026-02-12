@@ -31,7 +31,7 @@ Actuarial pricing teams deserve modern tooling. Atelier wraps [rustystats](https
 ## Installation
 
 ```bash
-uv add atelier
+uv add atel
 # or
 pip install atel
 ```
