@@ -10,7 +10,7 @@ Build, fit, diagnose, and iterate on Generalized Linear Models — without leavi
 [![License: EPL-2.0](https://img.shields.io/badge/license-EPL--2.0-blue.svg)](LICENSE)
 [![Powered by rustystats](https://img.shields.io/badge/engine-rustystats-e6522c.svg)](https://github.com/PricingFrontier/rustystats)
 
-![Atelier Screenshot](https://raw.githubusercontent.com/PricingFrontier/atelier/main/docs/screenshot.png)
+![Atelier Screenshot](docs/screenshot/screenshot.png)
 
 </div>
 
