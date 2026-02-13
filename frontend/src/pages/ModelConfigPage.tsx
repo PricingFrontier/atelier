@@ -14,6 +14,9 @@ import {
   Weight,
   Layers,
   Pencil,
+  AlertTriangle,
+  XCircle,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost, apiPut, apiUpload } from "@/lib/api";
@@ -91,6 +94,12 @@ export default function ModelConfigPage() {
   const [splitMapping, setSplitMapping] = useState<Record<string, "train" | "validation" | "holdout" | null>>(prev?.split?.mapping ?? {});
   const [loadingValues, setLoadingValues] = useState(false);
 
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<{ field: string; message: string; suggestion?: string }[]>([]);
+  const [validationWarnings, setValidationWarnings] = useState<{ field: string; message: string; suggestion?: string }[]>([]);
+  const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
+  const [validating, setValidating] = useState(false);
+
   // Mouse glow — use ref to avoid re-renders
   const glowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -104,6 +113,36 @@ export default function ModelConfigPage() {
     window.addEventListener("mousemove", handler, { passive: true });
     return () => window.removeEventListener("mousemove", handler);
   }, []);
+
+  // Run data quality validation when response + family (+ offset/weights) change
+  useEffect(() => {
+    if (!datasetPath || !response || !family) {
+      setValidationErrors([]);
+      setValidationWarnings([]);
+      return;
+    }
+    log.info(TAG, `validating data quality: response=${response} family=${family} offset=${offset} weights=${weights}`);
+    setValidating(true);
+    setDismissedWarnings(new Set());
+    apiPost<{ errors: typeof validationErrors; warnings: typeof validationWarnings }>("/datasets/validate", {
+      dataset_path: datasetPath,
+      response,
+      family,
+      offset: offset ?? undefined,
+      weights: weights ?? undefined,
+    })
+      .then((data) => {
+        log.info(TAG, `validation result: ${data.errors.length} errors, ${data.warnings.length} warnings`);
+        setValidationErrors(data.errors);
+        setValidationWarnings(data.warnings);
+      })
+      .catch((err) => {
+        log.error(TAG, "validation call failed", err);
+        setValidationErrors([]);
+        setValidationWarnings([]);
+      })
+      .finally(() => setValidating(false));
+  }, [datasetPath, response, family, offset, weights]);
 
   // Fetch unique values when split column changes
   const restoredSplitRef = useRef(!!prev?.split);
@@ -175,7 +214,9 @@ export default function ModelConfigPage() {
   };
 
   const hasData = columns.length > 0;
-  const isValid = hasData && response !== null && family !== null && projectName.trim().length > 0;
+  const hasValidationErrors = validationErrors.length > 0;
+  const activeWarnings = validationWarnings.filter((w) => !dismissedWarnings.has(w.message));
+  const isValid = hasData && response !== null && family !== null && projectName.trim().length > 0 && !hasValidationErrors;
 
   const handleContinue = async () => {
     log.info(TAG, `handleContinue: response=${response}  family=${family}  link=${effectiveLink}  offset=${offset}  weights=${weights}  splitCol=${splitColumn}`);
@@ -562,6 +603,51 @@ export default function ModelConfigPage() {
                 </div>
               </GlassCard>
             </AnimatedSection>
+
+            {/* Validation banners */}
+            {(validating || validationErrors.length > 0 || activeWarnings.length > 0) && (
+              <AnimatedSection delay={0.4} zIndex={12}>
+                <div className="space-y-2">
+                  {validating && (
+                    <p className="text-xs text-muted-foreground/50 animate-pulse">Checking data quality…</p>
+                  )}
+                  {validationErrors.map((e, i) => (
+                    <div
+                      key={`err-${i}`}
+                      className="flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.06] p-4"
+                    >
+                      <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-red-300">{e.message}</p>
+                        {e.suggestion && (
+                          <p className="mt-1 text-xs text-red-300/60">{e.suggestion}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {activeWarnings.map((w, i) => (
+                    <div
+                      key={`warn-${i}`}
+                      className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4"
+                    >
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-amber-300">{w.message}</p>
+                        {w.suggestion && (
+                          <p className="mt-1 text-xs text-amber-300/60">{w.suggestion}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setDismissedWarnings((prev) => new Set([...prev, w.message]))}
+                        className="shrink-0 rounded-md p-1 text-amber-400/50 transition-colors hover:bg-amber-500/10 hover:text-amber-400"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </AnimatedSection>
+            )}
 
             {/* Continue button */}
             <AnimatedSection delay={0.45} zIndex={10}>

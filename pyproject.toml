@@ -6,7 +6,7 @@ readme = "README.md"
 license = { text = "Elastic-2.0" }
 requires-python = ">=3.13"
 dependencies = [
-    "rustystats>=0.4.11",
+    "rustystats>=0.4.13",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "python-multipart>=0.0.18",

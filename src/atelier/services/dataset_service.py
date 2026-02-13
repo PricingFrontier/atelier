@@ -31,6 +31,14 @@ def load_dataframe(path: Path) -> pl.DataFrame:
             df = pl.read_parquet(path)
         else:
             df = pl.read_csv(path)
+
+        # Cast Decimal columns to Float64 — numpy/rustystats can't handle
+        # python Decimal values (especially mixed with nulls).
+        decimal_cols = [c for c in df.columns if df[c].dtype.base_type() == pl.Decimal]
+        if decimal_cols:
+            log.info("[load_dataframe] casting %d Decimal columns to Float64: %s", len(decimal_cols), decimal_cols)
+            df = df.with_columns([pl.col(c).cast(pl.Float64) for c in decimal_cols])
+
         log.info("[load_dataframe] loaded %d rows x %d cols from %s", df.height, df.width, path.name)
         log.debug("[load_dataframe] dtypes: %s", {c: str(df[c].dtype) for c in df.columns})
         return df

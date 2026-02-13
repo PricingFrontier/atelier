@@ -1,6 +1,11 @@
 """Pydantic schemas — single source of truth for request/response shapes."""
 
-from atelier.schemas.dataset import ColumnValuesRequest
+from atelier.schemas.dataset import (
+    ColumnValuesRequest,
+    ValidateRequest,
+    ValidateIssue,
+    ValidateResponse,
+)
 from atelier.schemas.model_spec import (
     ExploreRequest,
     FitRequest,
@@ -22,6 +27,9 @@ from atelier.schemas.project import (
 
 __all__ = [
     "ColumnValuesRequest",
+    "ValidateRequest",
+    "ValidateIssue",
+    "ValidateResponse",
     "ExploreRequest",
     "FitRequest",
     "SplitSpec",

@@ -111,6 +111,7 @@ export default function ModelBuilderPage() {
   // Exploration state (run once on mount)
   const [exploration, setExploration] = useState<ExplorationData | null>(null);
   const [explorationLoading, setExplorationLoading] = useState(false);
+  const [explorationError, setExplorationError] = useState<string | null>(null);
 
   // Fit state
   const [fitting, setFitting] = useState(false);
@@ -210,7 +211,10 @@ export default function ModelBuilderPage() {
         setExploration(data);
         fetchHistory();
       })
-      .catch((err) => log.error(TAG, "exploration FAILED", err))
+      .catch((err) => {
+        log.error(TAG, "exploration FAILED", err);
+        setExplorationError(err.message || "Data exploration failed");
+      })
       .finally(() => setExplorationLoading(false));
   }, [config]);
 
@@ -799,6 +803,17 @@ export default function ModelBuilderPage() {
               />
             ) : activeTab === "model" && (fitResult || exploration?.null_diagnostics) ? (
               <ModelPanel result={fitResult} nullDiagnostics={exploration?.null_diagnostics} />
+            ) : explorationError ? (
+              <div className="flex flex-1 items-center justify-center p-6">
+                <div className="max-w-md text-center" style={{ animation: "fadeUp 0.4s ease-out both" }}>
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                    <AlertTriangle className="h-6 w-6" />
+                  </div>
+                  <p className="mb-1 text-sm font-semibold text-destructive">Exploration failed</p>
+                  <p className="text-sm text-destructive/80">{explorationError}</p>
+                  <p className="mt-3 text-xs text-muted-foreground/40">Go back to fix data or model configuration issues</p>
+                </div>
+              </div>
             ) : fitError ? (
               <div className="flex flex-1 items-center justify-center p-6">
                 <div className="max-w-md text-center" style={{ animation: "fadeUp 0.4s ease-out both" }}>
