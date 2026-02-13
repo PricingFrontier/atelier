@@ -1,157 +1,149 @@
-2026-02-13 14:05:38 | INFO    | atelier | Logging initialised (level=DEBUG, file=/home/modelling/atelier.log)
-2026-02-13 14:05:39 | INFO    | uvicorn.error | Started server process [52141]
-2026-02-13 14:05:39 | INFO    | uvicorn.error | Waiting for application startup.
-2026-02-13 14:05:39 | INFO    | atelier | Starting Atelier lifespan — ensuring data dirs, schema, and WAL mode
-2026-02-13 14:05:39 | INFO    | atelier | Data directories ready
-2026-02-13 14:05:39 | INFO    | atelier.db.migrations | [migrations] ensuring schema (create_all)
-2026-02-13 14:05:39 | INFO    | atelier.db.engine | [db/engine] creating async engine  url=sqlite+aiosqlite:////home/ralph/.atelier/atelier.db
-2026-02-13 14:05:39 | DEBUG   | atelier.db.engine | [db/engine] engine created successfully
-2026-02-13 14:05:39 | INFO    | atelier.db.migrations | [migrations] base tables ensured
-2026-02-13 14:05:39 | INFO    | atelier.db.migrations | [migrations] running 6 column migrations
-2026-02-13 14:05:39 | DEBUG   | atelier.db.migrations | [migrations] column models.df_model already exists
-2026-02-13 14:05:39 | DEBUG   | atelier.db.migrations | [migrations] column models.df_resid already exists
-2026-02-13 14:05:39 | DEBUG   | atelier.db.migrations | [migrations] column models.n_validation already exists
-2026-02-13 14:05:39 | DEBUG   | atelier.db.migrations | [migrations] column models.n_params already exists
-2026-02-13 14:05:39 | DEBUG   | atelier.db.migrations | [migrations] column projects.config already exists
-2026-02-13 14:05:39 | DEBUG   | atelier.db.migrations | [migrations] column projects.n_versions already exists
-2026-02-13 14:05:39 | INFO    | atelier.db.migrations | [migrations] schema migration complete
-2026-02-13 14:05:39 | INFO    | atelier | Database schema up-to-date
-2026-02-13 14:05:39 | INFO    | atelier.db.engine | [db/engine] enabling WAL journal mode
-2026-02-13 14:05:39 | INFO    | atelier.db.engine | [db/engine] WAL mode enabled
-2026-02-13 14:05:39 | INFO    | atelier | WAL mode enabled — startup complete
-2026-02-13 14:05:39 | INFO    | uvicorn.error | Application startup complete.
-2026-02-13 14:05:39 | INFO    | uvicorn.error | Uvicorn running on http://127.0.0.1:8457 (Press CTRL+C to quit)
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54886 - "GET / HTTP/1.1" 200
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54892 - "GET /assets/index-1R98TNIb.css HTTP/1.1" 200
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54886 - "GET /assets/index-AXgTendj.js HTTP/1.1" 200
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54886 - "GET /assets/LandingPage-MnIeQsNB.js HTTP/1.1" 200
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54892 - "GET /assets/PageBackground-_MTynfjo.js HTTP/1.1" 200
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54892 - "GET /favicon.ico HTTP/1.1" 200
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54896 - "GET /assets/git-branch-Cs3BWlap.js HTTP/1.1" 200
-2026-02-13 14:05:40 | INFO    | uvicorn.access | 127.0.0.1:54906 - "GET /assets/clock-DrlBm-Xq.js HTTP/1.1" 200
-2026-02-13 14:05:41 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
-2026-02-13 14:05:41 | DEBUG   | atelier.db.engine | [db/engine] creating session factory
-2026-02-13 14:05:41 | INFO    | atelier.api.projects | [projects/list] fetching all projects
-2026-02-13 14:05:41 | INFO    | atelier.api.projects | [projects/list] returning 2 projects
-2026-02-13 14:05:41 | INFO    | uvicorn.access | 127.0.0.1:54906 - "GET /api/projects HTTP/1.1" 200
-2026-02-13 14:05:41 | DEBUG   | atelier.db.engine | [db/engine] async session closed
-2026-02-13 14:05:43 | INFO    | uvicorn.access | 127.0.0.1:54906 - "GET /favicon.ico HTTP/1.1" 200
-2026-02-13 14:05:43 | INFO    | uvicorn.access | 127.0.0.1:54896 - "GET /assets/ModelConfigPage-mjjVbeLI.js HTTP/1.1" 200
-2026-02-13 14:05:43 | INFO    | uvicorn.access | 127.0.0.1:54892 - "GET /assets/utils-COihVia6.js HTTP/1.1" 200
-2026-02-13 14:05:47 | INFO    | atelier.api.datasets | [upload] received file=test (1).parquet  content_type=application/octet-stream
-2026-02-13 14:05:47 | DEBUG   | atelier.api.datasets | [upload] dataset_id=1157d04e-f062-4435-a15c-ccef1d2596bb  dest=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet
-2026-02-13 14:05:47 | INFO    | atelier.api.datasets | [upload] read 5.56 MB from upload stream
-2026-02-13 14:05:47 | DEBUG   | atelier.api.datasets | [upload] wrote file to disk: /home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet
-2026-02-13 14:05:47 | INFO    | atelier.services.dataset_service | [load_dataframe] path=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet  exists=True  suffix=.parquet
-2026-02-13 14:05:47 | INFO    | atelier.services.dataset_service | [load_dataframe] loaded 239065 rows x 13 cols from 1157d04e-f062-4435-a15c-ccef1d2596bb.parquet
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [load_dataframe] dtypes: {'RenewalFlag': 'Int32', 'Group': 'Int32', 'Invited_Scheme': 'String', 'Scheme': 'String', 'Invited_Core_Net': 'Decimal(precision=19, scale=4)', 'FinanceGroup': 'String', 'InvitedPremiumDiff': 'Decimal(precision=38, scale=8)', 'TotalNumberOfQuotesPrediction': 'Float64', 'DifferenceToMarket': 'Float64', 'PreviousRenewal': 'Int32', 'PROPOSER_AGE': 'Int32', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied': 'Int32', 'Cover_Type': 'String'}
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] extracting metadata for 13 columns
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] RenewalFlag: dtype=Int32  n_unique=2  n_missing=0  is_num=True  is_cat=True
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] Group: dtype=Int32  n_unique=6  n_missing=0  is_num=True  is_cat=True
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] Invited_Scheme: dtype=String  n_unique=15  n_missing=0  is_num=False  is_cat=True
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] Scheme: dtype=String  n_unique=13  n_missing=0  is_num=False  is_cat=True
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] Invited_Core_Net: dtype=Decimal(precision=19, scale=4)  n_unique=58218  n_missing=0  is_num=True  is_cat=False
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] FinanceGroup: dtype=String  n_unique=12  n_missing=0  is_num=False  is_cat=True
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] InvitedPremiumDiff: dtype=Decimal(precision=38, scale=8)  n_unique=209998  n_missing=1  is_num=True  is_cat=False
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] TotalNumberOfQuotesPrediction: dtype=Float64  n_unique=195684  n_missing=0  is_num=True  is_cat=False
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] DifferenceToMarket: dtype=Float64  n_unique=238353  n_missing=0  is_num=True  is_cat=False
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] PreviousRenewal: dtype=Int32  n_unique=2  n_missing=0  is_num=True  is_cat=True
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] PROPOSER_AGE: dtype=Int32  n_unique=91  n_missing=0  is_num=True  is_cat=False
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied: dtype=Int32  n_unique=2  n_missing=0  is_num=True  is_cat=True
-2026-02-13 14:05:47 | DEBUG   | atelier.services.dataset_service | [column_meta] Cover_Type: dtype=String  n_unique=8  n_missing=0  is_num=False  is_cat=True
-2026-02-13 14:05:47 | INFO    | atelier.services.dataset_service | [column_meta] extracted metadata for 13 columns (9 numeric, 8 categorical)
-2026-02-13 14:05:47 | INFO    | atelier.api.datasets | [upload] success: dataset_id=1157d04e-f062-4435-a15c-ccef1d2596bb  filename=test (1).parquet  rows=239065  cols=13  columns=['RenewalFlag', 'Group', 'Invited_Scheme', 'Scheme', 'Invited_Core_Net', 'FinanceGroup', 'InvitedPremiumDiff', 'TotalNumberOfQuotesPrediction', 'DifferenceToMarket', 'PreviousRenewal', 'PROPOSER_AGE', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied', 'Cover_Type']
-2026-02-13 14:05:47 | INFO    | uvicorn.access | 127.0.0.1:54892 - "POST /api/datasets/upload HTTP/1.1" 200
-2026-02-13 14:06:14 | INFO    | atelier.api.datasets | [column-values] column=Group  dataset_path=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet
-2026-02-13 14:06:14 | INFO    | atelier.services.dataset_service | [load_column] path=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet  column=Group
-2026-02-13 14:06:14 | DEBUG   | atelier.services.dataset_service | [load_column] loaded column 'Group': dtype=Int32  len=239065  nulls=0
-2026-02-13 14:06:14 | INFO    | atelier.api.datasets | [column-values] returning 6 unique values for 'Group'
-2026-02-13 14:06:14 | INFO    | uvicorn.access | 127.0.0.1:43650 - "POST /api/datasets/column-values HTTP/1.1" 200
-2026-02-13 14:06:19 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
-2026-02-13 14:06:19 | INFO    | atelier.api.projects | [projects/create] name='wefwefwef'  has_config=True
-2026-02-13 14:06:19 | INFO    | atelier.api.projects | [projects/create] created project 'wefwefwef' (id=00e44f1b-68a3-4baa-8e02-59f8c330b7ef)
-2026-02-13 14:06:19 | INFO    | uvicorn.access | 127.0.0.1:43660 - "POST /api/projects HTTP/1.1" 200
-2026-02-13 14:06:19 | DEBUG   | atelier.db.engine | [db/engine] async session closed
-2026-02-13 14:06:19 | INFO    | uvicorn.access | 127.0.0.1:43660 - "GET /assets/ModelBuilderPage-6xQNFcKY.js HTTP/1.1" 200
-2026-02-13 14:06:19 | INFO    | uvicorn.access | 127.0.0.1:43672 - "GET /favicon.ico HTTP/1.1" 200
-2026-02-13 14:06:19 | INFO    | atelier.api.explore | [explore] request: response=RenewalFlag  family=binomial  offset=None  split=Group  dataset_path=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet  project_id=00e44f1b-68a3-4baa-8e02-59f8c330b7ef
-2026-02-13 14:06:19 | INFO    | atelier.services.dataset_service | [load_dataframe] path=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet  exists=True  suffix=.parquet
-2026-02-13 14:06:19 | INFO    | atelier.services.dataset_service | [load_dataframe] loaded 239065 rows x 13 cols from 1157d04e-f062-4435-a15c-ccef1d2596bb.parquet
-2026-02-13 14:06:19 | DEBUG   | atelier.services.dataset_service | [load_dataframe] dtypes: {'RenewalFlag': 'Int32', 'Group': 'Int32', 'Invited_Scheme': 'String', 'Scheme': 'String', 'Invited_Core_Net': 'Decimal(precision=19, scale=4)', 'FinanceGroup': 'String', 'InvitedPremiumDiff': 'Decimal(precision=38, scale=8)', 'TotalNumberOfQuotesPrediction': 'Float64', 'DifferenceToMarket': 'Float64', 'PreviousRenewal': 'Int32', 'PROPOSER_AGE': 'Int32', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied': 'Int32', 'Cover_Type': 'String'}
-2026-02-13 14:06:19 | INFO    | atelier.api.explore | [explore] loaded dataframe: rows=239065  cols=13
-2026-02-13 14:06:19 | INFO    | atelier.services.dataset_service | [apply_split] splitting on column='Group'  mapping={'0': 'train', '1': 'train', '2': 'train', '3': 'train', '4': 'validation', '5': 'holdout'}
-2026-02-13 14:06:19 | DEBUG   | atelier.services.dataset_service | [apply_split] train_vals=['0', '1', '2', '3']  val_vals=['4']
-2026-02-13 14:06:19 | INFO    | atelier.services.dataset_service | [apply_split] result: train=181186 rows  validation=57842 rows  (from 239065 total)
-2026-02-13 14:06:19 | INFO    | atelier.api.explore | [explore] after split: train_rows=181186  validation_rows=57842
-2026-02-13 14:06:19 | DEBUG   | atelier.services.dataset_service | [classify_columns] 13 total columns  reserved={'RenewalFlag', 'Group'}  cat_threshold=50
-2026-02-13 14:06:19 | INFO    | atelier.services.dataset_service | [classify_columns] result: 6 categorical, 5 continuous (skipped 0)
-2026-02-13 14:06:19 | INFO    | atelier.api.explore | [explore] classified factors: 6 categorical, 5 continuous  reserved={'RenewalFlag', 'Group'}
-2026-02-13 14:06:19 | DEBUG   | atelier.api.explore | [explore] cat_factors=['Invited_Scheme', 'Scheme', 'FinanceGroup', 'PreviousRenewal', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied', 'Cover_Type']
-2026-02-13 14:06:19 | DEBUG   | atelier.api.explore | [explore] cont_factors=['Invited_Core_Net', 'InvitedPremiumDiff', 'TotalNumberOfQuotesPrediction', 'DifferenceToMarket', 'PROPOSER_AGE']
-2026-02-13 14:06:19 | DEBUG   | atelier.api.explore | [explore] calling rs.explore_data with kwargs keys=['data', 'response', 'family', 'categorical_factors', 'continuous_factors']
-2026-02-13 14:06:21 | ERROR   | atelier.api.explore | [explore] rs.explore_data FAILED after 1266ms: '<' not supported between instances of 'decimal.Decimal' and 'NoneType'
-Traceback (most recent call last):
-  File "/home/modelling/.venv/lib/python3.13/site-packages/atelier/api/explore.py", line 71, in explore_data
-    exploration = rs.explore_data(**kwargs)
-  File "/home/modelling/.venv/lib/python3.13/site-packages/rustystats/diagnostics/explorer.py", line 1234, in explore_data
-    interaction_candidates = explorer.detect_interactions(
-        data=data,
-    ...<4 lines>...
-        cont_column_cache=_cont_cache,
-    )
-  File "/home/modelling/.venv/lib/python3.13/site-packages/rustystats/diagnostics/explorer.py", line 962, in detect_interactions
-    bins1 = self._discretize(values1, 5)
-  File "/home/modelling/.venv/lib/python3.13/site-packages/rustystats/diagnostics/explorer.py", line 1002, in _discretize
-    return discretize(values, n_bins)
-  File "/home/modelling/.venv/lib/python3.13/site-packages/rustystats/diagnostics/utils.py", line 37, in discretize
-    unique_vals = np.unique(values)
-  File "/home/modelling/.venv/lib/python3.13/site-packages/numpy/lib/_arraysetops_impl.py", line 296, in unique
-    ret = _unique1d(ar, return_index, return_inverse, return_counts,
-                    equal_nan=equal_nan, inverse_shape=ar.shape, axis=None,
-                    sorted=sorted)
-  File "/home/modelling/.venv/lib/python3.13/site-packages/numpy/lib/_arraysetops_impl.py", line 385, in _unique1d
-    ar.sort()
-    ~~~~~~~^^
-TypeError: '<' not supported between instances of 'decimal.Decimal' and 'NoneType'
-2026-02-13 14:06:21 | INFO    | uvicorn.access | 127.0.0.1:43672 - "POST /api/explore HTTP/1.1" 422
-2026-02-13 14:06:21 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
-2026-02-13 14:06:21 | INFO    | atelier.api.models | [models/history] project_id=00e44f1b-68a3-4baa-8e02-59f8c330b7ef
-2026-02-13 14:06:21 | INFO    | atelier.api.models | [models/history] found 0 versions for project 00e44f1b-68a3-4baa-8e02-59f8c330b7ef
-2026-02-13 14:06:21 | DEBUG   | atelier.api.models | [models/history] returning 0 summaries
-2026-02-13 14:06:21 | INFO    | uvicorn.access | 127.0.0.1:43660 - "GET /api/models/00e44f1b-68a3-4baa-8e02-59f8c330b7ef/history HTTP/1.1" 200
-2026-02-13 14:06:21 | DEBUG   | atelier.db.engine | [db/engine] async session closed
-2026-02-13 14:06:26 | INFO    | atelier.api.fit | [fit] request: response=RenewalFlag  family=binomial  link=logit  offset=None  weights=None  n_terms=1  split=Group  dataset_path=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet
-2026-02-13 14:06:26 | DEBUG   | atelier.api.fit | [fit] term[0]: column=Scheme  type=target_encoding  df=None  k=None  mono=None  expr=None
-2026-02-13 14:06:26 | INFO    | atelier.services.dataset_service | [load_dataframe] path=/home/ralph/.atelier/projects/_uploads/1157d04e-f062-4435-a15c-ccef1d2596bb.parquet  exists=True  suffix=.parquet
-2026-02-13 14:06:26 | INFO    | atelier.services.dataset_service | [load_dataframe] loaded 239065 rows x 13 cols from 1157d04e-f062-4435-a15c-ccef1d2596bb.parquet
-2026-02-13 14:06:26 | DEBUG   | atelier.services.dataset_service | [load_dataframe] dtypes: {'RenewalFlag': 'Int32', 'Group': 'Int32', 'Invited_Scheme': 'String', 'Scheme': 'String', 'Invited_Core_Net': 'Decimal(precision=19, scale=4)', 'FinanceGroup': 'String', 'InvitedPremiumDiff': 'Decimal(precision=38, scale=8)', 'TotalNumberOfQuotesPrediction': 'Float64', 'DifferenceToMarket': 'Float64', 'PreviousRenewal': 'Int32', 'PROPOSER_AGE': 'Int32', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied': 'Int32', 'Cover_Type': 'String'}
-2026-02-13 14:06:26 | INFO    | atelier.api.fit | [fit] loaded dataframe: rows=239065  cols=13
-2026-02-13 14:06:26 | INFO    | atelier.services.dataset_service | [apply_split] splitting on column='Group'  mapping={'0': 'train', '1': 'train', '2': 'train', '3': 'train', '4': 'validation', '5': 'holdout'}
-2026-02-13 14:06:26 | DEBUG   | atelier.services.dataset_service | [apply_split] train_vals=['0', '1', '2', '3']  val_vals=['4']
-2026-02-13 14:06:26 | INFO    | atelier.services.dataset_service | [apply_split] result: train=181186 rows  validation=57842 rows  (from 239065 total)
-2026-02-13 14:06:26 | INFO    | atelier.api.fit | [fit] after split: train_rows=181186  validation_rows=57842
-2026-02-13 14:06:26 | DEBUG   | atelier.api.fit | [fit] built terms_dict with 1 entries: ['Scheme']
-2026-02-13 14:06:26 | DEBUG   | atelier.api.fit | [fit] calling rs.glm_dict with kwargs keys=['response', 'terms', 'data', 'family', 'link']
-2026-02-13 14:06:26 | INFO    | atelier.api.fit | [fit] model fit completed in 89ms
-2026-02-13 14:06:26 | DEBUG   | atelier.api.fit | [fit] extracting summary and coefficient table
-2026-02-13 14:06:26 | INFO    | atelier.api.fit | [fit] model has 2 parameters / features
-2026-02-13 14:06:26 | DEBUG   | atelier.api.fit | [fit] coefficient table built with 2 rows
-2026-02-13 14:06:26 | INFO    | atelier.api.fit | [fit] metrics: deviance=243494.24863833011  null_deviance=249116.95366597798  aic=243498.24863833011  bic=243518.46319714395
-2026-02-13 14:06:26 | DEBUG   | atelier.services.dataset_service | [classify_columns] 13 total columns  reserved={'RenewalFlag', 'Group'}  cat_threshold=50
-2026-02-13 14:06:26 | INFO    | atelier.services.dataset_service | [classify_columns] result: 6 categorical, 5 continuous (skipped 0)
-2026-02-13 14:06:26 | INFO    | atelier.api.fit | [fit] diagnostics: 6 cat factors, 5 cont factors  reserved={'RenewalFlag', 'Group'}
-2026-02-13 14:06:27 | INFO    | atelier.api.fit | [fit] diagnostics completed in 1158ms  diag_keys=['model_summary', 'train_test', 'calibration', 'residual_summary', 'factors', 'interaction_candidates', 'model_comparison', 'warnings', 'vif', 'smooth_terms', 'coefficient_summary', 'factor_deviance', 'lift_chart', 'partial_dependence', 'overdispersion', 'spline_info', 'base_predictions_comparison']
-2026-02-13 14:06:27 | INFO    | atelier.api.fit | [fit] returning result: n_obs=181186  n_params=2  n_terms=1  fit_ms=89
-2026-02-13 14:06:27 | INFO    | uvicorn.access | 127.0.0.1:44428 - "POST /api/fit HTTP/1.1" 200
-2026-02-13 14:06:27 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
-2026-02-13 14:06:27 | INFO    | atelier.api.models | [models/save] project_id=00e44f1b-68a3-4baa-8e02-59f8c330b7ef  response=RenewalFlag  family=binomial  n_terms=1  deviance=243494.24863833011  aic=243498.24863833011  n_obs=181186  fit_ms=89
-2026-02-13 14:06:27 | DEBUG   | atelier.api.models | [models/save] committing v1 to DB for project 'wefwefwef'
-2026-02-13 14:06:27 | INFO    | atelier.api.models | [models/save] saved model v1 (id=89788e0d-4350-4947-a14f-ddad625cdfa3) for project 'wefwefwef' (id=00e44f1b-68a3-4baa-8e02-59f8c330b7ef)
-2026-02-13 14:06:27 | INFO    | uvicorn.access | 127.0.0.1:44428 - "POST /api/models/save HTTP/1.1" 200
-2026-02-13 14:06:27 | DEBUG   | atelier.db.engine | [db/engine] async session closed
-2026-02-13 14:06:27 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
-2026-02-13 14:06:27 | INFO    | atelier.api.models | [models/history] project_id=00e44f1b-68a3-4baa-8e02-59f8c330b7ef
-2026-02-13 14:06:27 | INFO    | atelier.api.models | [models/history] found 1 versions for project 00e44f1b-68a3-4baa-8e02-59f8c330b7ef
-2026-02-13 14:06:27 | DEBUG   | atelier.api.models | [models/history] returning 1 summaries
-2026-02-13 14:06:27 | INFO    | uvicorn.access | 127.0.0.1:44428 - "GET /api/models/00e44f1b-68a3-4baa-8e02-59f8c330b7ef/history HTTP/1.1" 200
-2026-02-13 14:06:27 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:53:51 | INFO    | atelier | Logging initialised (level=DEBUG, file=/home/modelling/atelier.log)
+2026-02-13 16:53:51 | INFO    | uvicorn.error | Started server process [179383]
+2026-02-13 16:53:51 | INFO    | uvicorn.error | Waiting for application startup.
+2026-02-13 16:53:51 | INFO    | atelier | Starting Atelier lifespan — ensuring data dirs, schema, and WAL mode
+2026-02-13 16:53:51 | INFO    | atelier | Data directories ready
+2026-02-13 16:53:51 | INFO    | atelier.db.migrations | [migrations] ensuring schema (create_all)
+2026-02-13 16:53:51 | INFO    | atelier.db.engine | [db/engine] creating async engine  url=sqlite+aiosqlite:////home/ralph/.atelier/atelier.db
+2026-02-13 16:53:51 | DEBUG   | atelier.db.engine | [db/engine] engine created successfully
+2026-02-13 16:53:51 | INFO    | atelier.db.migrations | [migrations] base tables ensured
+2026-02-13 16:53:51 | INFO    | atelier.db.migrations | [migrations] running 6 column migrations
+2026-02-13 16:53:51 | DEBUG   | atelier.db.migrations | [migrations] column models.df_model already exists
+2026-02-13 16:53:51 | DEBUG   | atelier.db.migrations | [migrations] column models.df_resid already exists
+2026-02-13 16:53:51 | DEBUG   | atelier.db.migrations | [migrations] column models.n_validation already exists
+2026-02-13 16:53:51 | DEBUG   | atelier.db.migrations | [migrations] column models.n_params already exists
+2026-02-13 16:53:51 | DEBUG   | atelier.db.migrations | [migrations] column projects.config already exists
+2026-02-13 16:53:51 | DEBUG   | atelier.db.migrations | [migrations] column projects.n_versions already exists
+2026-02-13 16:53:51 | INFO    | atelier.db.migrations | [migrations] schema migration complete
+2026-02-13 16:53:51 | INFO    | atelier | Database schema up-to-date
+2026-02-13 16:53:51 | INFO    | atelier.db.engine | [db/engine] enabling WAL journal mode
+2026-02-13 16:53:51 | INFO    | atelier.db.engine | [db/engine] WAL mode enabled
+2026-02-13 16:53:51 | INFO    | atelier | WAL mode enabled — startup complete
+2026-02-13 16:53:51 | INFO    | uvicorn.error | Application startup complete.
+2026-02-13 16:53:51 | INFO    | uvicorn.error | Uvicorn running on http://127.0.0.1:8457 (Press CTRL+C to quit)
+2026-02-13 16:53:53 | INFO    | uvicorn.access | 127.0.0.1:46736 - "GET / HTTP/1.1" 200
+2026-02-13 16:53:53 | INFO    | uvicorn.access | 127.0.0.1:46736 - "GET /favicon.ico HTTP/1.1" 200
+2026-02-13 16:53:54 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:53:54 | DEBUG   | atelier.db.engine | [db/engine] creating session factory
+2026-02-13 16:53:54 | INFO    | atelier.api.projects | [projects/list] fetching all projects
+2026-02-13 16:53:54 | INFO    | atelier.api.projects | [projects/list] returning 2 projects
+2026-02-13 16:53:54 | INFO    | uvicorn.access | 127.0.0.1:46736 - "GET /api/projects HTTP/1.1" 200
+2026-02-13 16:53:54 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:53:56 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:53:56 | INFO    | atelier.api.projects | [projects/get] project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:53:56 | DEBUG   | atelier.api.projects | [projects/get] found project 'renewal'  n_versions=2  has_config=True
+2026-02-13 16:53:56 | INFO    | uvicorn.access | 127.0.0.1:46736 - "GET /api/projects/639980e4-fa6b-479f-a3ed-01d353b57b33 HTTP/1.1" 200
+2026-02-13 16:53:56 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:53:56 | INFO    | uvicorn.access | 127.0.0.1:46736 - "GET /favicon.ico HTTP/1.1" 200
+2026-02-13 16:53:56 | INFO    | atelier.api.explore | [explore] request: response=RenewalFlag  family=binomial  offset=None  split=Group  dataset_path=/home/ralph/.atelier/projects/_uploads/48a5c6c7-d510-4682-9173-682327a78f59.parquet  project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:53:56 | INFO    | atelier.services.dataset_service | [load_dataframe] path=/home/ralph/.atelier/projects/_uploads/48a5c6c7-d510-4682-9173-682327a78f59.parquet  exists=True  suffix=.parquet
+2026-02-13 16:53:56 | INFO    | atelier.services.dataset_service | [load_dataframe] casting 2 Decimal columns to Float64: ['Invited_Core_Net', 'InvitedPremiumDiff']
+2026-02-13 16:53:56 | INFO    | atelier.services.dataset_service | [load_dataframe] loaded 239064 rows x 13 cols from 48a5c6c7-d510-4682-9173-682327a78f59.parquet
+2026-02-13 16:53:56 | DEBUG   | atelier.services.dataset_service | [load_dataframe] dtypes: {'RenewalFlag': 'Int32', 'Group': 'Int32', 'Invited_Scheme': 'String', 'Scheme': 'String', 'Invited_Core_Net': 'Float64', 'FinanceGroup': 'String', 'InvitedPremiumDiff': 'Float64', 'TotalNumberOfQuotesPrediction': 'Float64', 'DifferenceToMarket': 'Float64', 'PreviousRenewal': 'Int32', 'PROPOSER_AGE': 'Int32', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied': 'Int32', 'Cover_Type': 'String'}
+2026-02-13 16:53:56 | INFO    | atelier.api.explore | [explore] loaded dataframe: rows=239064  cols=13
+2026-02-13 16:53:56 | INFO    | atelier.services.dataset_service | [apply_split] splitting on column='Group'  mapping={'0': 'train', '1': 'train', '2': 'train', '3': 'train', '4': 'validation', '5': 'holdout'}
+2026-02-13 16:53:56 | DEBUG   | atelier.services.dataset_service | [apply_split] train_vals=['0', '1', '2', '3']  val_vals=['4']
+2026-02-13 16:53:56 | INFO    | atelier.services.dataset_service | [apply_split] result: train=181185 rows  validation=57842 rows  (from 239064 total)
+2026-02-13 16:53:56 | INFO    | atelier.api.explore | [explore] after split: train_rows=181185  validation_rows=57842
+2026-02-13 16:53:56 | DEBUG   | atelier.services.dataset_service | [classify_columns] 13 total columns  reserved={'Group', 'RenewalFlag'}  cat_threshold=50
+2026-02-13 16:53:56 | INFO    | atelier.services.dataset_service | [classify_columns] result: 6 categorical, 5 continuous (skipped 0)
+2026-02-13 16:53:56 | INFO    | atelier.api.explore | [explore] classified factors: 6 categorical, 5 continuous  reserved={'Group', 'RenewalFlag'}
+2026-02-13 16:53:56 | DEBUG   | atelier.api.explore | [explore] cat_factors=['Invited_Scheme', 'Scheme', 'FinanceGroup', 'PreviousRenewal', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied', 'Cover_Type']
+2026-02-13 16:53:56 | DEBUG   | atelier.api.explore | [explore] cont_factors=['Invited_Core_Net', 'InvitedPremiumDiff', 'TotalNumberOfQuotesPrediction', 'DifferenceToMarket', 'PROPOSER_AGE']
+2026-02-13 16:53:56 | DEBUG   | atelier.api.explore | [explore] calling rs.explore_data with kwargs keys=['data', 'response', 'family', 'categorical_factors', 'continuous_factors']
+2026-02-13 16:54:01 | INFO    | atelier.api.explore | [explore] rs.explore_data completed in 4836ms  result_keys=['data_summary', 'factor_stats', 'missing_values', 'univariate_tests', 'correlations', 'cramers_v', 'vif', 'zero_inflation', 'overdispersion', 'interaction_candidates', 'response_stats']
+2026-02-13 16:54:01 | DEBUG   | atelier.api.explore | [explore] fitting null model with kwargs keys=['response', 'terms', 'data', 'family']
+2026-02-13 16:54:01 | DEBUG   | atelier.api.explore | [explore] null model fitted, computing diagnostics
+2026-02-13 16:54:02 | INFO    | atelier.api.explore | [explore] null model diagnostics completed in 1018ms  diag_keys=['model_summary', 'train_test', 'calibration', 'residual_summary', 'factors', 'interaction_candidates', 'model_comparison', 'warnings', 'vif', 'smooth_terms', 'coefficient_summary', 'factor_deviance', 'lift_chart', 'partial_dependence', 'overdispersion', 'spline_info', 'base_predictions_comparison']
+2026-02-13 16:54:02 | INFO    | atelier.api.explore | [explore] saving null model for project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:02 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:54:02 | INFO    | atelier.api.models | [models/history] project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:02 | INFO    | atelier.api.explore | [explore] returning result with 12 top-level keys
+2026-02-13 16:54:02 | INFO    | uvicorn.access | 127.0.0.1:46736 - "POST /api/explore HTTP/1.1" 200
+2026-02-13 16:54:02 | INFO    | atelier.api.models | [models/history] found 2 versions for project 639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:02 | DEBUG   | atelier.api.models | [models/history] returning 2 summaries
+2026-02-13 16:54:02 | INFO    | uvicorn.access | 127.0.0.1:46748 - "GET /api/models/639980e4-fa6b-479f-a3ed-01d353b57b33/history HTTP/1.1" 200
+2026-02-13 16:54:02 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:54:02 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:54:02 | INFO    | atelier.api.models | [models/history] project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:02 | INFO    | atelier.api.models | [models/history] found 2 versions for project 639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:02 | DEBUG   | atelier.api.models | [models/history] returning 2 summaries
+2026-02-13 16:54:02 | INFO    | uvicorn.access | 127.0.0.1:46748 - "GET /api/models/639980e4-fa6b-479f-a3ed-01d353b57b33/history HTTP/1.1" 200
+2026-02-13 16:54:02 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:54:02 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:54:02 | INFO    | atelier.api.models | [models/detail] model_id=e02f09f5-0c13-4a42-b6be-1eb12cc8150c
+2026-02-13 16:54:02 | INFO    | atelier.api.models | [models/detail] returning model v2  project_id=639980e4-fa6b-479f-a3ed-01d353b57b33  status=fitted  n_obs=181185
+2026-02-13 16:54:02 | INFO    | uvicorn.access | 127.0.0.1:46736 - "GET /api/models/detail/e02f09f5-0c13-4a42-b6be-1eb12cc8150c HTTP/1.1" 200
+2026-02-13 16:54:02 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:54:08 | INFO    | atelier.api.fit | [fit] request: response=RenewalFlag  family=binomial  link=logit  offset=None  weights=None  n_terms=1  split=Group  dataset_path=/home/ralph/.atelier/projects/_uploads/48a5c6c7-d510-4682-9173-682327a78f59.parquet
+2026-02-13 16:54:08 | DEBUG   | atelier.api.fit | [fit] term[0]: column=InvitedPremiumDiff  type=linear  df=None  k=None  mono=None  expr=None
+2026-02-13 16:54:08 | INFO    | atelier.services.dataset_service | [load_dataframe] path=/home/ralph/.atelier/projects/_uploads/48a5c6c7-d510-4682-9173-682327a78f59.parquet  exists=True  suffix=.parquet
+2026-02-13 16:54:08 | INFO    | atelier.services.dataset_service | [load_dataframe] casting 2 Decimal columns to Float64: ['Invited_Core_Net', 'InvitedPremiumDiff']
+2026-02-13 16:54:08 | INFO    | atelier.services.dataset_service | [load_dataframe] loaded 239064 rows x 13 cols from 48a5c6c7-d510-4682-9173-682327a78f59.parquet
+2026-02-13 16:54:08 | DEBUG   | atelier.services.dataset_service | [load_dataframe] dtypes: {'RenewalFlag': 'Int32', 'Group': 'Int32', 'Invited_Scheme': 'String', 'Scheme': 'String', 'Invited_Core_Net': 'Float64', 'FinanceGroup': 'String', 'InvitedPremiumDiff': 'Float64', 'TotalNumberOfQuotesPrediction': 'Float64', 'DifferenceToMarket': 'Float64', 'PreviousRenewal': 'Int32', 'PROPOSER_AGE': 'Int32', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied': 'Int32', 'Cover_Type': 'String'}
+2026-02-13 16:54:08 | INFO    | atelier.api.fit | [fit] loaded dataframe: rows=239064  cols=13
+2026-02-13 16:54:08 | INFO    | atelier.services.dataset_service | [apply_split] splitting on column='Group'  mapping={'0': 'train', '1': 'train', '2': 'train', '3': 'train', '4': 'validation', '5': 'holdout'}
+2026-02-13 16:54:08 | DEBUG   | atelier.services.dataset_service | [apply_split] train_vals=['0', '1', '2', '3']  val_vals=['4']
+2026-02-13 16:54:08 | INFO    | atelier.services.dataset_service | [apply_split] result: train=181185 rows  validation=57842 rows  (from 239064 total)
+2026-02-13 16:54:08 | INFO    | atelier.api.fit | [fit] after split: train_rows=181185  validation_rows=57842
+2026-02-13 16:54:08 | DEBUG   | atelier.api.fit | [fit] built terms_dict with 1 entries: ['InvitedPremiumDiff']
+2026-02-13 16:54:08 | DEBUG   | atelier.api.fit | [fit] calling rs.glm_dict with kwargs keys=['response', 'terms', 'data', 'family', 'link']
+2026-02-13 16:54:08 | INFO    | atelier.api.fit | [fit] model fit completed in 48ms
+2026-02-13 16:54:08 | DEBUG   | atelier.api.fit | [fit] extracting summary and coefficient table
+2026-02-13 16:54:08 | INFO    | atelier.api.fit | [fit] model has 2 parameters / features
+2026-02-13 16:54:08 | DEBUG   | atelier.api.fit | [fit] coefficient table built with 2 rows
+2026-02-13 16:54:08 | INFO    | atelier.api.fit | [fit] metrics: deviance=228745.42117755936  null_deviance=249115.34207660166  aic=228749.42117755953  bic=228769.63572533496
+2026-02-13 16:54:08 | DEBUG   | atelier.services.dataset_service | [classify_columns] 13 total columns  reserved={'Group', 'RenewalFlag'}  cat_threshold=50
+2026-02-13 16:54:08 | INFO    | atelier.services.dataset_service | [classify_columns] result: 6 categorical, 5 continuous (skipped 0)
+2026-02-13 16:54:08 | INFO    | atelier.api.fit | [fit] diagnostics: 6 cat factors, 5 cont factors  reserved={'Group', 'RenewalFlag'}
+2026-02-13 16:54:09 | INFO    | atelier.api.fit | [fit] diagnostics completed in 1056ms  diag_keys=['model_summary', 'train_test', 'calibration', 'residual_summary', 'factors', 'interaction_candidates', 'model_comparison', 'warnings', 'vif', 'smooth_terms', 'coefficient_summary', 'factor_deviance', 'lift_chart', 'partial_dependence', 'overdispersion', 'spline_info', 'base_predictions_comparison']
+2026-02-13 16:54:09 | INFO    | atelier.api.fit | [fit] returning result: n_obs=181185  n_params=2  n_terms=1  fit_ms=48
+2026-02-13 16:54:09 | INFO    | uvicorn.access | 127.0.0.1:57946 - "POST /api/fit HTTP/1.1" 200
+2026-02-13 16:54:09 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:54:09 | INFO    | atelier.api.models | [models/save] project_id=639980e4-fa6b-479f-a3ed-01d353b57b33  response=RenewalFlag  family=binomial  n_terms=1  deviance=228745.42117755936  aic=228749.42117755953  n_obs=181185  fit_ms=48
+2026-02-13 16:54:09 | DEBUG   | atelier.api.models | [models/save] committing v3 to DB for project 'renewal'
+2026-02-13 16:54:09 | INFO    | atelier.api.models | [models/save] saved model v3 (id=c0b49b78-0ad7-4754-a405-6a5453d0562e) for project 'renewal' (id=639980e4-fa6b-479f-a3ed-01d353b57b33)
+2026-02-13 16:54:09 | INFO    | uvicorn.access | 127.0.0.1:57946 - "POST /api/models/save HTTP/1.1" 200
+2026-02-13 16:54:09 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:54:09 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:54:09 | INFO    | atelier.api.models | [models/history] project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:09 | INFO    | atelier.api.models | [models/history] found 3 versions for project 639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:09 | DEBUG   | atelier.api.models | [models/history] returning 3 summaries
+2026-02-13 16:54:09 | INFO    | uvicorn.access | 127.0.0.1:57946 - "GET /api/models/639980e4-fa6b-479f-a3ed-01d353b57b33/history HTTP/1.1" 200
+2026-02-13 16:54:09 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:54:19 | INFO    | atelier.api.explore | [explore] request: response=RenewalFlag  family=binomial  offset=None  split=Group  dataset_path=/home/ralph/.atelier/projects/_uploads/48a5c6c7-d510-4682-9173-682327a78f59.parquet  project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:19 | INFO    | atelier.services.dataset_service | [load_dataframe] path=/home/ralph/.atelier/projects/_uploads/48a5c6c7-d510-4682-9173-682327a78f59.parquet  exists=True  suffix=.parquet
+2026-02-13 16:54:19 | INFO    | atelier.services.dataset_service | [load_dataframe] casting 2 Decimal columns to Float64: ['Invited_Core_Net', 'InvitedPremiumDiff']
+2026-02-13 16:54:19 | INFO    | atelier.services.dataset_service | [load_dataframe] loaded 239064 rows x 13 cols from 48a5c6c7-d510-4682-9173-682327a78f59.parquet
+2026-02-13 16:54:19 | DEBUG   | atelier.services.dataset_service | [load_dataframe] dtypes: {'RenewalFlag': 'Int32', 'Group': 'Int32', 'Invited_Scheme': 'String', 'Scheme': 'String', 'Invited_Core_Net': 'Float64', 'FinanceGroup': 'String', 'InvitedPremiumDiff': 'Float64', 'TotalNumberOfQuotesPrediction': 'Float64', 'DifferenceToMarket': 'Float64', 'PreviousRenewal': 'Int32', 'PROPOSER_AGE': 'Int32', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied': 'Int32', 'Cover_Type': 'String'}
+2026-02-13 16:54:19 | INFO    | atelier.api.explore | [explore] loaded dataframe: rows=239064  cols=13
+2026-02-13 16:54:19 | INFO    | atelier.services.dataset_service | [apply_split] splitting on column='Group'  mapping={'0': 'train', '1': 'train', '2': 'train', '3': 'train', '4': 'validation', '5': 'holdout'}
+2026-02-13 16:54:19 | DEBUG   | atelier.services.dataset_service | [apply_split] train_vals=['0', '1', '2', '3']  val_vals=['4']
+2026-02-13 16:54:19 | INFO    | atelier.services.dataset_service | [apply_split] result: train=181185 rows  validation=57842 rows  (from 239064 total)
+2026-02-13 16:54:19 | INFO    | atelier.api.explore | [explore] after split: train_rows=181185  validation_rows=57842
+2026-02-13 16:54:19 | DEBUG   | atelier.services.dataset_service | [classify_columns] 13 total columns  reserved={'Group', 'RenewalFlag'}  cat_threshold=50
+2026-02-13 16:54:19 | INFO    | atelier.services.dataset_service | [classify_columns] result: 6 categorical, 5 continuous (skipped 0)
+2026-02-13 16:54:19 | INFO    | atelier.api.explore | [explore] classified factors: 6 categorical, 5 continuous  reserved={'Group', 'RenewalFlag'}
+2026-02-13 16:54:19 | DEBUG   | atelier.api.explore | [explore] cat_factors=['Invited_Scheme', 'Scheme', 'FinanceGroup', 'PreviousRenewal', 'PROPERTY_OCCUPANCY_OCC_STATUS_Unoccupied', 'Cover_Type']
+2026-02-13 16:54:19 | DEBUG   | atelier.api.explore | [explore] cont_factors=['Invited_Core_Net', 'InvitedPremiumDiff', 'TotalNumberOfQuotesPrediction', 'DifferenceToMarket', 'PROPOSER_AGE']
+2026-02-13 16:54:19 | DEBUG   | atelier.api.explore | [explore] calling rs.explore_data with kwargs keys=['data', 'response', 'family', 'categorical_factors', 'continuous_factors']
+2026-02-13 16:54:24 | INFO    | atelier.api.explore | [explore] rs.explore_data completed in 4628ms  result_keys=['data_summary', 'factor_stats', 'missing_values', 'univariate_tests', 'correlations', 'cramers_v', 'vif', 'zero_inflation', 'overdispersion', 'interaction_candidates', 'response_stats']
+2026-02-13 16:54:24 | DEBUG   | atelier.api.explore | [explore] fitting null model with kwargs keys=['response', 'terms', 'data', 'family']
+2026-02-13 16:54:24 | DEBUG   | atelier.api.explore | [explore] null model fitted, computing diagnostics
+2026-02-13 16:54:25 | INFO    | atelier.api.explore | [explore] null model diagnostics completed in 973ms  diag_keys=['model_summary', 'train_test', 'calibration', 'residual_summary', 'factors', 'interaction_candidates', 'model_comparison', 'warnings', 'vif', 'smooth_terms', 'coefficient_summary', 'factor_deviance', 'lift_chart', 'partial_dependence', 'overdispersion', 'spline_info', 'base_predictions_comparison']
+2026-02-13 16:54:25 | INFO    | atelier.api.explore | [explore] saving null model for project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:25 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:54:25 | INFO    | atelier.api.models | [models/history] project_id=639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:25 | INFO    | uvicorn.access | 127.0.0.1:57242 - "GET / HTTP/1.1" 200
+2026-02-13 16:54:25 | INFO    | atelier.api.models | [models/history] found 3 versions for project 639980e4-fa6b-479f-a3ed-01d353b57b33
+2026-02-13 16:54:25 | DEBUG   | atelier.api.models | [models/history] returning 3 summaries
+2026-02-13 16:54:25 | INFO    | uvicorn.access | 127.0.0.1:57228 - "GET /api/models/639980e4-fa6b-479f-a3ed-01d353b57b33/history HTTP/1.1" 200
+2026-02-13 16:54:25 | DEBUG   | atelier.db.engine | [db/engine] async session closed
+2026-02-13 16:54:25 | INFO    | atelier.api.explore | [explore] returning result with 12 top-level keys
+2026-02-13 16:54:25 | INFO    | uvicorn.access | 127.0.0.1:57222 - "POST /api/explore HTTP/1.1" 200
+2026-02-13 16:54:25 | INFO    | uvicorn.access | 127.0.0.1:57228 - "GET /favicon.ico HTTP/1.1" 200
+2026-02-13 16:54:25 | DEBUG   | atelier.db.engine | [db/engine] opening new async session
+2026-02-13 16:54:25 | INFO    | atelier.api.projects | [projects/list] fetching all projects
+2026-02-13 16:54:25 | INFO    | atelier.api.projects | [projects/list] returning 2 projects
+2026-02-13 16:54:25 | INFO    | uvicorn.access | 127.0.0.1:57228 - "GET /api/projects HTTP/1.1" 200
+2026-02-13 16:54:25 | DEBUG   | atelier.db.engine | [db/engine] async session closed

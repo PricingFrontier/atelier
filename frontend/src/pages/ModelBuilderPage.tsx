@@ -1009,7 +1009,7 @@ function FactorBadgeDisplay({ fb }: { fb: FactorBadge | undefined }) {
             : fb.devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70"
             : "bg-white/[0.04] text-muted-foreground/40"
         )}
-        title={`Deviance reduction: ${fb.devPct.toFixed(2)}%${fb.relImportance != null ? ` · Relative importance: ${fb.relImportance.toFixed(1)}%` : ""} (Δdev=${fb.diag.significance!.dev_contrib.toFixed(1)})`}
+        title={`Deviance reduction: ${fb.devPct.toFixed(2)}%${fb.relImportance != null ? ` · Relative importance: ${fb.relImportance.toFixed(1)}%` : ""}${fb.diag.significance?.dev_contrib != null ? ` (Δdev=${fb.diag.significance.dev_contrib.toFixed(1)})` : ""}`}
       >
         {fb.devPct >= 0.1 ? `${fb.devPct.toFixed(1)}%` : `${fb.devPct.toFixed(2)}%`}
       </span>

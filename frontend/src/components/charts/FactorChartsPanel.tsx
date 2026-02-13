@@ -312,16 +312,16 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
                   >
                     <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/70">{c.term}</td>
                     <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground/60">
-                      {c.estimate.toFixed(6)}
+                      {c.estimate != null ? c.estimate.toFixed(6) : "—"}
                     </td>
                     <td className={cn(
                       "px-4 py-1.5 text-right font-mono text-[0.7rem] font-semibold",
-                      c.relativity > 1.05 ? "text-red-400/80" : c.relativity < 0.95 ? "text-emerald-400/80" : "text-foreground/60"
+                      c.relativity != null && c.relativity > 1.05 ? "text-red-400/80" : c.relativity != null && c.relativity < 0.95 ? "text-emerald-400/80" : "text-foreground/60"
                     )}>
-                      {c.relativity.toFixed(4)}
+                      {c.relativity != null ? c.relativity.toFixed(4) : "—"}
                     </td>
                     <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground/50">
-                      {c.p_value < 0.0001 ? "<0.0001" : c.p_value.toFixed(4)}
+                      {c.p_value != null ? (c.p_value < 0.0001 ? "<0.0001" : c.p_value.toFixed(4)) : "—"}
                     </td>
                   </tr>
                 ))}
