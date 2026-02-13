@@ -4,25 +4,29 @@
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
 
-  --color-background: #09090b;
-  --color-foreground: #fafafa;
-  --color-card: #0e0e10;
-  --color-card-foreground: #fafafa;
-  --color-popover: #0e0e10;
-  --color-popover-foreground: #fafafa;
+  --color-background: #0a0a0e;
+  --color-foreground: #f0f0f3;
+  --color-card: #141418;
+  --color-card-foreground: #f0f0f3;
+  --color-popover: #161619;
+  --color-popover-foreground: #f0f0f3;
   --color-primary: #3b82f6;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #1e1e22;
-  --color-secondary-foreground: #fafafa;
-  --color-muted: #1e1e22;
-  --color-muted-foreground: #71717a;
-  --color-accent: #1e1e22;
-  --color-accent-foreground: #fafafa;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #fafafa;
-  --color-border: #1e1e22;
-  --color-input: #1e1e22;
+  --color-secondary: #1c1c22;
+  --color-secondary-foreground: #f0f0f3;
+  --color-muted: #1c1c22;
+  --color-muted-foreground: #86868f;
+  --color-accent: #22222a;
+  --color-accent-foreground: #f0f0f3;
+  --color-destructive: #e5484d;
+  --color-destructive-foreground: #f0f0f3;
+  --color-border: #27272f;
+  --color-input: #1c1c22;
   --color-ring: #3b82f6;
+
+  --color-surface: #111115;
+  --color-surface-hover: #1a1a20;
+  --color-surface-active: #222228;
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -39,7 +43,7 @@ body {
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -48,30 +52,8 @@ body {
   to { opacity: 1; }
 }
 
-@keyframes shimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
 @keyframes drawLine {
   to { stroke-dashoffset: 0; }
-}
-
-@keyframes auroraFloat1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -20px) scale(1.05); }
-  66% { transform: translate(-20px, 15px) scale(0.95); }
-}
-
-@keyframes auroraFloat2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-25px, 20px) scale(1.08); }
-  66% { transform: translate(15px, -25px) scale(0.92); }
-}
-
-@keyframes auroraFloat3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(20px, -15px) scale(1.1); }
 }
 
 @keyframes spin {
@@ -85,7 +67,7 @@ body {
 }
 
 @keyframes gentlePulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
+  0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.05); }
 }
 
@@ -97,10 +79,4 @@ body {
 @keyframes stepReveal {
   from { opacity: 0; transform: translateX(-8px); }
   to { opacity: 1; transform: translateX(0); }
-}
-
-/* Performance: isolate fixed background decorations from paint */
-.bg-layer-contained {
-  contain: strict;
-  pointer-events: none;
 }

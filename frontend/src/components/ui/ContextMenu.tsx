@@ -29,12 +29,12 @@ export default function ContextMenu({
   return (
     <div
       style={style}
-      className="min-w-[200px] rounded-lg border border-white/[0.1] bg-[#111113] p-1 shadow-2xl shadow-black/60"
+      className="fixed z-[100] min-w-[180px] rounded-lg border border-border bg-popover p-1 shadow-2xl shadow-black/60"
       onClick={(e) => e.stopPropagation()}
     >
       {items.map((item, i) => {
         if (item.separator) {
-          return <div key={`sep-${i}`} className="my-1 h-px bg-white/[0.06]" />;
+          return <div key={`sep-${i}`} className="mx-2 my-1 h-px bg-border" />;
         }
 
         const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -50,10 +50,10 @@ export default function ContextMenu({
                 if (item.action) item.action();
               }}
               className={cn(
-                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                 isOpen
-                  ? "bg-white/[0.06] text-foreground"
-                  : "text-foreground/80 hover:bg-white/[0.06] hover:text-foreground"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               {item.icon && <span className="text-muted-foreground/60">{item.icon}</span>}
@@ -71,13 +71,13 @@ export default function ContextMenu({
             {/* Submenu */}
             {hasSubmenu && isOpen && (
               <div
-                className="absolute left-full top-0 ml-1 min-w-[200px] rounded-lg border border-white/[0.1] bg-[#111113] p-1 shadow-2xl shadow-black/60"
+                className="absolute top-0 min-w-[200px] rounded-lg border border-border bg-popover p-1 shadow-2xl shadow-black/60"
                 style={{ animation: "fadeUp 0.1s ease-out both" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {item.submenu!.map((sub, j) => {
                   if (sub.separator) {
-                    return <div key={`sub-sep-${j}`} className="my-1 h-px bg-white/[0.06]" />;
+                    return <div key={`sub-sep-${j}`} className="my-1 h-px bg-border" />;
                   }
                   return (
                     <button
@@ -86,7 +86,7 @@ export default function ContextMenu({
                         e.stopPropagation();
                         if (sub.action) sub.action();
                       }}
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-foreground/80 transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     >
                       {sub.icon && <span className="text-muted-foreground/60">{sub.icon}</span>}
                       <div className="flex-1">

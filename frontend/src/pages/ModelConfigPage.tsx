@@ -100,20 +100,6 @@ export default function ModelConfigPage() {
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
   const [validating, setValidating] = useState(false);
 
-  // Mouse glow — use ref to avoid re-renders
-  const glowRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const el = glowRef.current;
-      if (el) {
-        el.style.left = e.clientX + "px";
-        el.style.top = e.clientY + "px";
-      }
-    };
-    window.addEventListener("mousemove", handler, { passive: true });
-    return () => window.removeEventListener("mousemove", handler);
-  }, []);
-
   // Run data quality validation when response + family (+ offset/weights) change
   useEffect(() => {
     if (!datasetPath || !response || !family) {
@@ -271,35 +257,26 @@ export default function ModelConfigPage() {
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
       <PageBackground
-        ref={glowRef}
         gridOpacity={0.10}
         gridMask="radial-gradient(ellipse 50% 60% at 50% 30%, black 10%, transparent 100%)"
-        blobs={[
-          { className: "absolute -top-32 left-[10%] h-[500px] w-[500px] animate-[auroraFloat1_12s_ease-in-out_infinite] rounded-full bg-blue-500 opacity-[0.04] blur-[120px]" },
-          { className: "absolute top-[60%] right-[5%] h-[400px] w-[400px] animate-[auroraFloat2_14s_ease-in-out_infinite] rounded-full bg-violet-500 opacity-[0.04] blur-[120px]" },
-        ]}
-        cursorGlow
       />
 
       {/* Header */}
       <header
-        className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-white/[0.06] px-5 backdrop-blur-xl"
-        style={{
-          background: "linear-gradient(180deg, hsl(0 0% 5% / 0.9) 0%, hsl(0 0% 4% / 0.8) 100%)",
-        }}
+        className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border px-5 bg-background"
       >
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-all hover:bg-white/[0.05] hover:text-foreground"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
         </button>
-        <div className="h-4 w-px bg-white/[0.08]" />
+        <div className="h-4 w-px bg-border" />
         <span className="text-sm font-medium tracking-wide text-foreground">New Model</span>
         {file && (
           <>
-            <div className="h-4 w-px bg-white/[0.08]" />
+            <div className="h-4 w-px bg-border" />
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <FileSpreadsheet className="h-3.5 w-3.5 text-primary/60" />
               {file.name}
@@ -320,7 +297,7 @@ export default function ModelConfigPage() {
                     <div
                       className={cn(
                         "mx-1 h-px w-8 transition-colors duration-500",
-                        s.done ? "bg-primary/30" : "bg-white/[0.06]"
+                        s.done ? "bg-primary/30" : "bg-border"
                       )}
                     />
                   )}
@@ -329,7 +306,7 @@ export default function ModelConfigPage() {
                       "flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-500",
                       s.done
                         ? "bg-primary/10 text-primary"
-                        : "bg-white/[0.03] text-muted-foreground"
+                        : "bg-surface text-muted-foreground"
                     )}
                   >
                     <div
@@ -337,7 +314,7 @@ export default function ModelConfigPage() {
                         "flex h-5 w-5 items-center justify-center rounded-full text-[0.55rem] font-semibold transition-all duration-500",
                         s.done
                           ? "bg-primary/20 text-primary"
-                          : "bg-white/[0.06] text-muted-foreground"
+                          : "bg-accent text-muted-foreground"
                       )}
                     >
                       {s.done ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
@@ -350,17 +327,17 @@ export default function ModelConfigPage() {
           </div>
         </AnimatedSection>
 
-        {/* Data upload state */}
-        {!hasData ? (
-          <AnimatedSection delay={0.15} className="flex flex-1 flex-col items-center justify-center">
-            <h2
-              className="mb-2 bg-gradient-to-br from-white to-zinc-400 bg-clip-text text-2xl font-light tracking-wide text-transparent"
-            >
-              Select your data
-            </h2>
-            <p className="mb-8 text-sm text-muted-foreground">
-              Upload a CSV or Parquet file to get started.
-            </p>
+      {/* Data upload state */}
+      {!hasData ? (
+        <AnimatedSection delay={0.15} className="flex flex-1 flex-col items-center justify-center">
+          <h2
+            className="mb-2 bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-2xl font-light tracking-wide text-transparent"
+          >
+            Select your data
+          </h2>
+          <p className="mb-8 text-sm text-muted-foreground">
+            Upload a CSV or Parquet file to get started.
+          </p>
 
             {/* Upload drop zone with animated border */}
             <div
@@ -372,9 +349,9 @@ export default function ModelConfigPage() {
             >
               <div
                 className={cn(
-                  "relative flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#0c0c0e] p-16 transition-all",
-                  dragOver && "border-primary/30 bg-[#0e0e12]",
-                  !dragOver && !uploading && "group-hover:border-white/[0.12] group-hover:bg-[#0e0e12]"
+                  "relative flex flex-col items-center justify-center rounded-xl border border-border bg-surface p-16 transition-all",
+                  dragOver && "border-primary/30 bg-surface-hover",
+                  !dragOver && !uploading && "group-hover:border-border group-hover:bg-surface-hover"
                 )}
               >
                 <div
@@ -382,7 +359,7 @@ export default function ModelConfigPage() {
                     "mb-4 flex h-14 w-14 items-center justify-center rounded-xl transition-all duration-300",
                     uploading
                       ? "bg-primary/10 text-primary"
-                      : "bg-white/[0.04] text-muted-foreground/50 group-hover:bg-primary/10 group-hover:text-primary/70"
+                      : "bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary/70"
                   )}
                 >
                   <Upload className={cn("h-6 w-6", uploading && "animate-pulse")} />
@@ -390,7 +367,7 @@ export default function ModelConfigPage() {
                 <p className="text-sm font-medium text-foreground/80">
                   {uploading ? "Reading file…" : dragOver ? "Drop file here" : "Drop CSV or Parquet file"}
                 </p>
-                <p className="mt-1.5 text-xs text-muted-foreground/50">or click to browse</p>
+                <p className="mt-1.5 text-xs text-muted-foreground/70">or click to browse</p>
                 <input
                   ref={fileRef}
                   type="file"
@@ -419,7 +396,7 @@ export default function ModelConfigPage() {
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   placeholder="e.g. Freq GLM – Motor 2025"
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/30 transition-all focus:border-primary/30 focus:bg-white/[0.04] focus:outline-none focus:shadow-[0_0_0_1px_#3b82f620]"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all focus:border-primary/30 focus:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-primary/20"
                 />
               </GlassCard>
             </AnimatedSection>
@@ -562,7 +539,7 @@ export default function ModelConfigPage() {
                       <label className="block text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground/70">
                         Assign Values
                       </label>
-                      <div className="rounded-lg border border-white/[0.06] bg-white/[0.01] divide-y divide-white/[0.04]">
+                      <div className="rounded-lg border border-border bg-surface divide-y divide-border">
                         {splitValues.map((val) => (
                           <div key={val} className="flex items-center gap-3 px-3 py-2">
                             <span className="min-w-0 flex-1 truncate text-sm text-foreground/80">{val}</span>
@@ -584,7 +561,7 @@ export default function ModelConfigPage() {
                                         : group === "validation"
                                           ? "bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30"
                                           : "bg-rose-500/20 text-rose-400 ring-1 ring-rose-500/30"
-                                      : "bg-white/[0.03] text-muted-foreground/40 hover:bg-white/[0.06] hover:text-muted-foreground/60"
+                                      : "bg-secondary text-muted-foreground/60 hover:bg-accent hover:text-muted-foreground"
                                   )}
                                 >
                                   {group.charAt(0).toUpperCase() + group.slice(1)}
@@ -598,7 +575,7 @@ export default function ModelConfigPage() {
                   )}
 
                   {splitColumn && loadingValues && (
-                    <p className="text-xs text-muted-foreground/50 animate-pulse">Loading values…</p>
+                    <p className="text-xs text-muted-foreground animate-pulse">Loading values…</p>
                   )}
                 </div>
               </GlassCard>
@@ -609,7 +586,7 @@ export default function ModelConfigPage() {
               <AnimatedSection delay={0.4} zIndex={12}>
                 <div className="space-y-2">
                   {validating && (
-                    <p className="text-xs text-muted-foreground/50 animate-pulse">Checking data quality…</p>
+                    <p className="text-xs text-muted-foreground animate-pulse">Checking data quality…</p>
                   )}
                   {validationErrors.map((e, i) => (
                     <div
@@ -664,8 +641,8 @@ export default function ModelConfigPage() {
                   className={cn(
                     "relative flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-medium transition-all duration-300",
                     isValid
-                      ? "bg-primary text-primary-foreground shadow-[0_0_24px_-4px_#3b82f640] hover:-translate-y-0.5 hover:shadow-[0_0_32px_-4px_#3b82f660]"
-                      : "cursor-not-allowed bg-white/[0.04] text-muted-foreground/40"
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:-translate-y-0.5 hover:brightness-110"
+                      : "cursor-not-allowed bg-secondary text-muted-foreground/50"
                   )}
                 >
                   Continue to Model Builder
@@ -675,7 +652,7 @@ export default function ModelConfigPage() {
                   )} />
                 </button>
                 {!isValid && (
-                  <p className="mt-3 text-center text-xs text-muted-foreground/40">
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
                     Select a response variable to continue
                   </p>
                 )}
@@ -692,7 +669,7 @@ export default function ModelConfigPage() {
 
 function GlassCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5 transition-colors hover:border-white/[0.1] hover:bg-white/[0.03]">
+    <div className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-border hover:bg-surface-hover">
       {children}
     </div>
   );
@@ -714,7 +691,7 @@ function CardHeader({
       </div>
       <div>
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground/70">{subtitle}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
       </div>
     </div>
   );
@@ -766,11 +743,11 @@ function SelectDropdown({
         className={cn(
           "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all",
           open
-            ? "border-primary/30 bg-white/[0.04] shadow-[0_0_0_1px_#3b82f620]"
-            : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
+            ? "border-primary/30 bg-surface-hover ring-1 ring-primary/20"
+            : "border-border bg-surface hover:border-border hover:bg-surface-hover"
         )}
       >
-        <span className={selected ? "text-foreground" : "text-muted-foreground/40"}>
+        <span className={selected ? "text-foreground" : "text-muted-foreground/60"}>
           {selected ? selected.label : placeholder}
         </span>
         <ChevronDown
@@ -784,7 +761,7 @@ function SelectDropdown({
         <>
           <div className="fixed inset-0 z-[999]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[1000] max-h-60 overflow-y-auto rounded-lg border border-white/[0.08] bg-[#111113] p-1 shadow-2xl shadow-black/50"
+            className="fixed z-[1000] max-h-60 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-2xl shadow-black/50"
             style={{
               left: pos.left,
               width: pos.width,
@@ -796,7 +773,7 @@ function SelectDropdown({
             {allowNone && (
               <button
                 onClick={() => { onChange(null); setOpen(false); }}
-                className="flex w-full items-center rounded-md px-3 py-2 text-sm text-muted-foreground/60 transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                className="flex w-full items-center rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 None
               </button>
@@ -809,12 +786,12 @@ function SelectDropdown({
                   "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all",
                   opt.value === value
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 <span className="flex-1 text-left">{opt.label}</span>
                 {opt.badge && (
-                  <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[0.6rem] font-medium text-muted-foreground/60">
+                  <span className="rounded-md bg-accent px-1.5 py-0.5 text-[0.6rem] font-medium text-muted-foreground">
                     {opt.badge}
                   </span>
                 )}

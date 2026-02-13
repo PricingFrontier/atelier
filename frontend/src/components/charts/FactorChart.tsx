@@ -52,7 +52,7 @@ export default memo(function FactorChart({
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     return (
-      <div className="rounded-lg border border-white/[0.1] bg-[#111113] px-3 py-2 text-xs shadow-xl">
+      <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-xl">
         <p className="mb-1 font-semibold text-foreground">{label}</p>
         {tooltipType === "diag" ? (
           <>
@@ -62,35 +62,35 @@ export default memo(function FactorChart({
         ) : (
           <p className="text-blue-400">Rate: {d?.rate1?.toFixed(4)}</p>
         )}
-        <p className="text-muted-foreground/50">{volumeLabel}: {d?.volume?.toLocaleString(undefined, { maximumFractionDigits: 1 })}</p>
-        <p className="text-muted-foreground/40">n = {d?.n?.toLocaleString()}</p>
+        <p className="text-muted-foreground">{volumeLabel}: {d?.volume?.toLocaleString(undefined, { maximumFractionDigits: 1 })}</p>
+        <p className="text-muted-foreground/70">n = {d?.n?.toLocaleString()}</p>
       </div>
     );
   };
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-      <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+    <div className="rounded-xl border border-border bg-card p-4">
+      <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {title}
       </h3>
       <div className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.06)" }}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
               tickLine={false}
               interval={0}
               angle={rotateLabels ? -35 : 0}
               textAnchor={rotateLabels ? "end" : "middle"}
               height={rotateLabels ? 60 : 30}
             />
-            <YAxis yAxisId="vol" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }} axisLine={{ stroke: "rgba(255,255,255,0.06)" }} tickLine={false} />
-            <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }} axisLine={{ stroke: "rgba(255,255,255,0.06)" }} tickLine={false} />
+            <YAxis yAxisId="vol" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} tickLine={false} />
+            <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} tickLine={false} />
             <Tooltip content={renderTooltip} />
-            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)" }} />
+            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.5)" }} />
             <Bar yAxisId="vol" dataKey="volume" name={volumeLabel} fill="hsl(220 15% 40% / 0.35)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
             {lines.map((l) => (
               <Line key={l.key} yAxisId="rate" dataKey={l.key} name={l.name} stroke={l.color} strokeWidth={2} dot={{ r: 3, fill: l.color }} isAnimationActive={false} />

@@ -180,18 +180,18 @@ function MetricsGrid({
   ];
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
-      <div className="border-b border-white/[0.06] px-4 py-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+    <div className="rounded-xl border border-border bg-card">
+      <div className="border-b border-border px-4 py-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {isBaseline
-            ? <>Baseline Metrics <span className="font-normal text-muted-foreground/30">(null model)</span></>
+            ? <>Baseline Metrics <span className="font-normal text-muted-foreground/60">(null model)</span></>
             : "Model Metrics"}
         </h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/[0.06] text-[0.65rem] uppercase tracking-wider text-muted-foreground/40">
+            <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground">
               <th className="px-4 py-2.5 text-left font-semibold">Metric</th>
               <th className="px-4 py-2.5 text-right font-semibold">
                 <span className="inline-flex items-center gap-1">
@@ -209,8 +209,8 @@ function MetricsGrid({
           </thead>
           <tbody>
             {metrics.map((m) => (
-              <tr key={m.label} className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]">
-                <td className="px-4 py-2.5 text-[0.75rem] text-foreground/70">{m.label}</td>
+              <tr key={m.label} className="border-b border-border/50 transition-colors hover:bg-surface-hover">
+                <td className="px-4 py-2.5 text-[0.75rem] text-foreground/80">{m.label}</td>
                 <td className={`px-4 py-2.5 text-right font-mono text-[0.75rem] ${valColor}`}>
                   {fmt(m.train, m.dp)}
                 </td>
@@ -243,7 +243,7 @@ function MetricDelta({
   lowerBetter: boolean;
   target?: number;
 }) {
-  if (value == null) return <span className="text-muted-foreground/30">—</span>;
+  if (value == null) return <span className="text-muted-foreground">—</span>;
 
   let color = "text-foreground";
   if (trainValue != null) {
@@ -266,24 +266,24 @@ function MetricDelta({
 function ModelComparisonCard({ comp }: { comp: NonNullable<DiagnosticsData["model_comparison"]> }) {
   return (
     <div className="grid grid-cols-3 gap-3">
-      <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-        <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/40">Deviance Reduction</p>
+      <div className="rounded-lg border border-border bg-card px-4 py-3">
+        <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground">Deviance Reduction</p>
         <p className="mt-1 font-mono text-lg font-semibold text-emerald-400">
           {comp.deviance_reduction_pct.toFixed(2)}%
         </p>
       </div>
-      <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-        <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/40">AIC Improvement</p>
+      <div className="rounded-lg border border-border bg-card px-4 py-3">
+        <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground">AIC Improvement</p>
         <p className="mt-1 font-mono text-lg font-semibold text-foreground">
           {comp.aic_improvement.toFixed(1)}
         </p>
       </div>
-      <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-        <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/40">LR Test</p>
+      <div className="rounded-lg border border-border bg-card px-4 py-3">
+        <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground">LR Test</p>
         <p className="mt-1 font-mono text-lg font-semibold text-foreground">
           χ²={comp.likelihood_ratio_chi2.toFixed(1)}
         </p>
-        <p className="text-[0.6rem] text-muted-foreground/40">
+        <p className="text-[0.6rem] text-muted-foreground">
           df={comp.likelihood_ratio_df}, p={pFmt(comp.likelihood_ratio_pvalue)}
         </p>
       </div>
@@ -309,47 +309,47 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     return (
-      <div className="rounded-lg border border-white/[0.1] bg-[#111113] px-3 py-2 text-xs shadow-xl">
+      <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-xl">
         <p className="mb-1 font-semibold text-foreground">Decile {d?.decile}</p>
         <p className="text-blue-400">A/E Ratio: {d?.ae_ratio?.toFixed(3)}</p>
         <p className="text-emerald-400">Lift: {d?.lift?.toFixed(3)}</p>
         <p className="text-amber-400">Cumulative Lift: {d?.cumulative_lift?.toFixed(3)}</p>
-        <p className="text-muted-foreground/50">Actual: {d?.actual?.toFixed(4)}</p>
-        <p className="text-muted-foreground/50">Predicted: {d?.predicted?.toFixed(4)}</p>
-        <p className="text-muted-foreground/40">n = {d?.n?.toLocaleString()}</p>
+        <p className="text-muted-foreground">Actual: {d?.actual?.toFixed(4)}</p>
+        <p className="text-muted-foreground">Predicted: {d?.predicted?.toFixed(4)}</p>
+        <p className="text-muted-foreground/70">n = {d?.n?.toLocaleString()}</p>
       </div>
     );
   };
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <div className="mb-1 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Lift Chart
         </h3>
-        <div className="flex items-center gap-4 text-[0.6rem] text-muted-foreground/40">
-          <span>Gini: <span className="font-semibold text-foreground/70">{(liftChart.gini * 100).toFixed(1)}%</span></span>
-          <span>KS: <span className="font-semibold text-foreground/70">{liftChart.ks_statistic.toFixed(1)} (D{liftChart.ks_decile})</span></span>
+        <div className="flex items-center gap-4 text-[0.6rem] text-muted-foreground">
+          <span>Gini: <span className="font-semibold text-foreground/80">{(liftChart.gini * 100).toFixed(1)}%</span></span>
+          <span>KS: <span className="font-semibold text-foreground/80">{liftChart.ks_statistic.toFixed(1)} (D{liftChart.ks_decile})</span></span>
         </div>
       </div>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
             <XAxis
               dataKey="decile"
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.06)" }}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.35)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.06)" }}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
               tickLine={false}
             />
             <Tooltip content={renderTooltip} />
-            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)" }} />
-            <ReferenceLine y={1} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
+            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.5)" }} />
+            <ReferenceLine y={1} stroke="rgba(255,255,255,0.2)" strokeDasharray="4 4" />
             <Bar
               dataKey="ae_ratio"
               name="A/E Ratio"
@@ -378,7 +378,7 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
         </ResponsiveContainer>
       </div>
       {liftChart.weak_deciles.length > 0 && (
-        <p className="mt-2 text-[0.6rem] text-amber-400/50">
+        <p className="mt-2 text-[0.6rem] text-amber-400/70">
           Weak separation in deciles: {liftChart.weak_deciles.join(", ")}
         </p>
       )}
@@ -434,16 +434,16 @@ function CoefficientTable({
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
-      <div className="border-b border-white/[0.06] px-4 py-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+    <div className="rounded-xl border border-border bg-card">
+      <div className="border-b border-border px-4 py-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Coefficients ({rows.length})
         </h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/[0.06] text-[0.65rem] uppercase tracking-wider text-muted-foreground/40">
+            <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground">
               <th className="px-4 py-2.5 text-left font-semibold">Parameter</th>
               <th className="px-4 py-2.5 text-right font-semibold">Estimate</th>
               <th className="px-4 py-2.5 text-right font-semibold">Std Error</th>
@@ -464,16 +464,16 @@ function CoefficientTable({
                 <tr
                   key={row.key}
                   className={cn(
-                    "border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]",
-                    i % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
+                    "border-b border-border/50 transition-colors hover:bg-surface-hover",
+                    i % 2 === 0 ? "bg-transparent" : "bg-surface"
                   )}
                   style={{ animation: `fadeUp 0.2s ease-out ${Math.min(0.02 * i, 0.6)}s both` }}
                 >
                   <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{row.name}</td>
                   <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-foreground">{fmt(row.estimate, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.se, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.z, 3)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{row.p != null ? pFmt(row.p) : fmt(null, 4)}</td>
+                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{fmt(row.se, 6)}</td>
+                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{fmt(row.z, 3)}</td>
+                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{row.p != null ? pFmt(row.p) : fmt(null, 4)}</td>
                   {hasDiag && (
                     <td className={cn(
                       "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
@@ -483,21 +483,21 @@ function CoefficientTable({
                     </td>
                   )}
                   {hasDiag && (
-                    <td className="px-4 py-2 text-right font-mono text-[0.6rem] text-muted-foreground/40">
+                    <td className="px-4 py-2 text-right font-mono text-[0.6rem] text-muted-foreground">
                       {row.ci ? `[${fmt(row.ci[0], 4)}, ${fmt(row.ci[1], 4)}]` : "—"}
                     </td>
                   )}
                   {hasDiag && vifMap.size > 0 && (
                     <td className={cn(
                       "px-4 py-2 text-right font-mono text-[0.75rem]",
-                      vifVal != null && vifVal > 5 ? "text-red-400" : vifVal != null && vifVal > 2.5 ? "text-amber-400" : "text-muted-foreground/40"
+                      vifVal != null && vifVal > 5 ? "text-red-400" : vifVal != null && vifVal > 2.5 ? "text-amber-400" : "text-muted-foreground"
                     )}>
                       {vifVal != null ? fmt(vifVal, 2) : "—"}
                     </td>
                   )}
                   <td className={cn(
                     "px-4 py-2 text-right font-mono text-[0.75rem] font-bold",
-                    sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400/70" : sig.includes("*") ? "text-blue-400/60" : "text-muted-foreground/30"
+                    sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400/70" : sig.includes("*") ? "text-blue-400/60" : "text-muted-foreground/50"
                   )}>
                     {sig || ""}
                   </td>
@@ -507,7 +507,7 @@ function CoefficientTable({
           </tbody>
         </table>
       </div>
-      <div className="border-t border-white/[0.06] px-4 py-2 text-[0.6rem] text-muted-foreground/30">
+      <div className="border-t border-border px-4 py-2 text-[0.6rem] text-muted-foreground">
         Signif. codes: *** 0.001 ** 0.01 * 0.05 . 0.1
       </div>
     </div>

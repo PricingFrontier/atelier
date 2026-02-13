@@ -63,7 +63,7 @@ export default memo(function FactorChartsPanel({
 
         {/* Train / Validation toggle — only show when we have test diagnostics */}
         {hasDiag && hasTest && (
-          <div className="flex items-center gap-0.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-0.5">
+          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface p-0.5">
             <button
               onClick={() => setDiagSet("train")}
               className={cn(
@@ -178,8 +178,8 @@ export default memo(function FactorChartsPanel({
 
       {/* No data state */}
       {!explorationLoading && !factorStat && !hasDiag && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
-          <p className="text-sm text-muted-foreground/50">No data available for this factor</p>
+        <div className="rounded-xl border border-border bg-card p-8 text-center">
+          <p className="text-sm text-muted-foreground">No data available for this factor</p>
         </div>
       )}
     </div>
@@ -197,7 +197,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
           "rounded-xl border p-4",
           diag.score_test.significant
             ? "border-emerald-500/20 bg-emerald-500/[0.04]"
-            : "border-white/[0.06] bg-white/[0.02]"
+            : "border-border bg-card"
         )}>
           <div className="flex items-center justify-between">
             <div>
@@ -212,7 +212,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
                   </span>
                 )}
                 {!diag.score_test.significant && (
-                  <span className="ml-2 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold bg-white/[0.06] text-muted-foreground/50">
+                  <span className="ml-2 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold bg-accent text-muted-foreground">
                     Not significant
                   </span>
                 )}
@@ -247,7 +247,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
                 {devPct != null && (
                   <span className={cn(
                     "ml-2 rounded-full px-2 py-0.5 text-[0.6rem] font-bold",
-                    devPct >= 1 ? "bg-blue-500/15 text-blue-400" : devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70" : "bg-white/[0.06] text-muted-foreground/50"
+                    devPct >= 1 ? "bg-blue-500/15 text-blue-400" : devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70" : "bg-accent text-muted-foreground"
                   )}>
                     {devPct >= 0.1 ? `${devPct.toFixed(1)}% deviance reduction` : `${devPct.toFixed(2)}% deviance reduction`}
                   </span>
@@ -285,8 +285,8 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
 
       {/* Coefficients / relativities table — fitted factors */}
       {diag.coefficients && diag.coefficients.length > 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
-          <div className="border-b border-white/[0.06] px-4 py-3">
+        <div className="rounded-xl border border-border bg-card">
+          <div className="border-b border-border px-4 py-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
               Relativities
             </h3>
@@ -294,7 +294,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06] text-[0.65rem] uppercase tracking-wider text-muted-foreground/40">
+                <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground/60">
                   <th className="px-4 py-2 text-left font-semibold">Term</th>
                   <th className="px-4 py-2 text-right font-semibold">Estimate</th>
                   <th className="px-4 py-2 text-right font-semibold">Relativity</th>
@@ -306,11 +306,11 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
                   <tr
                     key={c.term}
                     className={cn(
-                      "border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]",
-                      i % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
+                      "border-b border-border/50 transition-colors hover:bg-surface-hover",
+                      i % 2 === 0 ? "bg-transparent" : "bg-surface"
                     )}
                   >
-                    <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/70">{c.term}</td>
+                    <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/80">{c.term}</td>
                     <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground/60">
                       {c.estimate != null ? c.estimate.toFixed(6) : "—"}
                     </td>
@@ -333,8 +333,8 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
 
       {/* Transform info */}
       {diag.transform && (
-        <p className="text-[0.6rem] text-muted-foreground/40">
-          Transform: <span className="font-mono text-foreground/50">{diag.transform}</span>
+        <p className="text-[0.6rem] text-muted-foreground">
+          Transform: <span className="font-mono text-foreground/70">{diag.transform}</span>
         </p>
       )}
     </div>

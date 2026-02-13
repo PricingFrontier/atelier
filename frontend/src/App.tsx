@@ -35,7 +35,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
       return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-8">
           <h1 className="text-lg font-semibold text-destructive">Something went wrong</h1>
-          <pre className="max-w-2xl overflow-auto rounded-lg border border-white/10 bg-white/[0.02] p-4 text-xs text-muted-foreground">
+          <pre className="max-w-2xl overflow-auto rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
             {this.state.error.message}\n{this.state.error.stack}
           </pre>
           <p className="text-xs text-muted-foreground">Check the browser console for full details.</p>
