@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from atelier.config import LOGS_DIR, ensure_data_dir
+from atelier.config import ensure_data_dir
 from atelier.db.engine import enable_wal
 from atelier.db.migrations import ensure_schema
 
@@ -36,9 +36,9 @@ def configure_logging(*, log_to_file: bool = True) -> None:
     handlers: list[logging.Handler] = [console]
 
     if log_to_file:
-        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        log_path = Path.cwd() / "atelier.log"
         file_handler = RotatingFileHandler(
-            LOGS_DIR / "atelier.log",
+            log_path,
             maxBytes=5 * 1024 * 1024,  # 5 MB per file
             backupCount=5,
             encoding="utf-8",
@@ -63,7 +63,7 @@ def configure_logging(*, log_to_file: bool = True) -> None:
         uv_logger.propagate = False
 
     if log_to_file:
-        log.info("Logging initialised (level=DEBUG, file=%s)", LOGS_DIR / "atelier.log")
+        log.info("Logging initialised (level=DEBUG, file=%s)", Path.cwd() / "atelier.log")
     else:
         log.info("Logging initialised (level=DEBUG, file=disabled)")
 
