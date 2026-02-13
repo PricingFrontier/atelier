@@ -2,17 +2,26 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Clock, GitBranch, ArrowRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiGet, apiDelete } from "@/lib/api";
+import { log } from "@/lib/logger";
 import PageBackground from "@/components/ui/PageBackground";
 import type { ProjectSummary } from "@/types";
+
+const TAG = "LandingPage";
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
 
+  log.info(TAG, "render");
+
   useEffect(() => {
+    log.info(TAG, "mount — fetching projects");
     apiGet<ProjectSummary[]>("/projects")
-      .then(setProjects)
-      .catch((err) => console.error("[LandingPage] fetch projects:", err));
+      .then((data) => {
+        log.info(TAG, `fetched ${data.length} projects`, data.map((p) => ({ id: p.id, name: p.name })));
+        setProjects(data);
+      })
+      .catch((err) => log.error(TAG, "fetch projects FAILED", err));
   }, []);
 
   useEffect(() => {
@@ -26,10 +35,15 @@ export default function LandingPage() {
   }, [navigate]);
 
   const handleLoadProject = async (p: ProjectSummary) => {
+    log.info(TAG, `loadProject id=${p.id} name="${p.name}"`);
     try {
       const detail = await apiGet<any>(`/projects/${p.id}`);
       const cfg = detail.config;
-      if (!cfg) return;
+      if (!cfg) {
+        log.warn(TAG, `project ${p.id} has no config — aborting load`);
+        return;
+      }
+      log.info(TAG, `project config loaded — response=${cfg.response} family=${cfg.family} cols=${(cfg.columns ?? []).length}`);
 
       // Pass basic config — builder will fetch terms + fit result on mount
       navigate("/model", {
@@ -46,17 +60,20 @@ export default function LandingPage() {
           split: cfg.split ?? null,
         },
       });
+      log.info(TAG, `navigated to /model for project ${p.id}`);
     } catch (err) {
-      console.error("[LandingPage] load project:", err);
+      log.error(TAG, `loadProject FAILED for id=${p.id}`, err);
     }
   };
 
   const handleDeleteProject = async (id: string) => {
+    log.info(TAG, `deleteProject id=${id}`);
     try {
       await apiDelete(`/projects/${id}`);
+      log.info(TAG, `deleted project ${id}`);
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      console.error("[LandingPage] delete project:", err);
+      log.error(TAG, `deleteProject FAILED for id=${id}`, err);
     }
   };
 

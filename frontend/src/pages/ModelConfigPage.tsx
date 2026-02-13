@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiPost, apiPut, apiUpload } from "@/lib/api";
+import { log } from "@/lib/logger";
 import PageBackground from "@/components/ui/PageBackground";
 import {
   FAMILY_OPTIONS,
@@ -51,12 +52,16 @@ function AnimatedSection({
   );
 }
 
+const TAG = "ModelConfig";
+
 export default function ModelConfigPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const prev = location.state as ModelConfig | null;
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  log.info(TAG, `render  hasPrev=${!!prev}  prevProject=${prev?.projectName ?? "none"}`);
 
   // Project state
   const [projectId, setProjectId] = useState<string | null>(prev?.projectId ?? null);
@@ -104,13 +109,16 @@ export default function ModelConfigPage() {
   const restoredSplitRef = useRef(!!prev?.split);
   useEffect(() => {
     if (!splitColumn || !datasetPath) {
+      log.debug(TAG, "split column cleared or no dataset");
       setSplitValues([]);
       setSplitMapping({});
       return;
     }
+    log.info(TAG, `fetching unique values for split column='${splitColumn}'`);
     setLoadingValues(true);
     apiPost<{ values: string[] }>("/datasets/column-values", { dataset_path: datasetPath, column: splitColumn })
       .then((data) => {
+        log.info(TAG, `got ${data.values.length} unique values for '${splitColumn}'`, data.values);
         setSplitValues(data.values);
         if (restoredSplitRef.current) {
           restoredSplitRef.current = false;
@@ -118,7 +126,7 @@ export default function ModelConfigPage() {
           setSplitMapping(Object.fromEntries(data.values.map((v: string) => [v, null])));
         }
       })
-      .catch((err) => console.error("[ModelConfig] column values:", err))
+      .catch((err) => log.error(TAG, `column values fetch FAILED for '${splitColumn}'`, err))
       .finally(() => setLoadingValues(false));
   }, [splitColumn, datasetPath]);
 
@@ -130,15 +138,18 @@ export default function ModelConfigPage() {
   const handleFile = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    log.info(TAG, `handleFile: name=${f.name}  size=${(f.size / 1024 / 1024).toFixed(2)}MB  type=${f.type}`);
     setFile(f);
     setUploadError(null);
     setUploading(true);
 
     try {
       const data = await apiUpload<{ columns: ColumnMeta[]; file_path: string }>("/datasets/upload", f);
+      log.info(TAG, `upload success: ${data.columns.length} columns  path=${data.file_path}`);
       setColumns(data.columns);
       setDatasetPath(data.file_path);
     } catch (err: any) {
+      log.error(TAG, `upload FAILED: ${err.message}`, err);
       setUploadError(err.message || "Failed to upload file");
     } finally {
       setUploading(false);
@@ -158,6 +169,7 @@ export default function ModelConfigPage() {
   }, []);
 
   const handleFamilyChange = (f: Family) => {
+    log.info(TAG, `familyChange: ${family} -> ${f}`);
     setFamily(f);
     setLink(null);
   };
@@ -166,6 +178,7 @@ export default function ModelConfigPage() {
   const isValid = hasData && response !== null && family !== null && projectName.trim().length > 0;
 
   const handleContinue = async () => {
+    log.info(TAG, `handleContinue: response=${response}  family=${family}  link=${effectiveLink}  offset=${offset}  weights=${weights}  splitCol=${splitColumn}`);
     const splitConfig = splitColumn ? { column: splitColumn, mapping: splitMapping } : null;
     const configPayload = {
       dataset_path: datasetPath,
@@ -180,6 +193,7 @@ export default function ModelConfigPage() {
 
     let pid = projectId;
     if (!pid) {
+      log.info(TAG, `creating new project: name='${projectName.trim()}'`);
       try {
         const data = await apiPost<{ id: string }>("/projects", {
           name: projectName.trim(),
@@ -187,15 +201,18 @@ export default function ModelConfigPage() {
         });
         pid = data.id;
         setProjectId(pid);
+        log.info(TAG, `project created: id=${pid}`);
       } catch (err) {
-        console.error("[ModelConfig] create project:", err);
+        log.error(TAG, "create project FAILED", err);
         return;
       }
     } else {
+      log.info(TAG, `updating config for existing project ${pid}`);
       apiPut(`/projects/${pid}/config`, { config: configPayload })
-        .catch((err) => console.error("[ModelConfig] update config:", err));
+        .catch((err) => log.error(TAG, "update config FAILED", err));
     }
 
+    log.info(TAG, `navigating to /model  projectId=${pid}`);
     navigate("/model", {
       state: { projectId: pid, projectName: projectName.trim(), response, family, link: effectiveLink, offset, weights, columns, datasetPath, split: splitConfig },
     });

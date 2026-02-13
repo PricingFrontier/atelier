@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiGet, apiPost } from "@/lib/api";
+import { log } from "@/lib/logger";
 import type {
   ColumnMeta,
   ModelConfig,
@@ -94,10 +95,14 @@ function serializeTerms(terms: TermSpec[]) {
   }));
 }
 
+const TAG = "ModelBuilder";
+
 export default function ModelBuilderPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const config = location.state as ModelConfig | null;
+
+  log.info(TAG, `render  hasConfig=${!!config}  project=${config?.projectName ?? "none"}  response=${config?.response ?? "?"}  family=${config?.family ?? "?"}`);
 
   const [search, setSearch] = useState("");
   const glowRef = useRef<HTMLDivElement>(null);
@@ -124,16 +129,21 @@ export default function ModelBuilderPage() {
 
   const fetchHistory = useCallback(() => {
     if (!config?.projectId) return;
+    log.info(TAG, `fetchHistory for project ${config.projectId}`);
     setHistoryLoading(true);
     apiGet<ModelSummary[]>(`/models/${config.projectId}/history`)
-      .then((data) => setHistory(data))
-      .catch((err) => console.error("[ModelBuilder] fetch history:", err))
+      .then((data) => {
+        log.info(TAG, `fetchHistory: got ${data.length} versions`);
+        setHistory(data);
+      })
+      .catch((err) => log.error(TAG, "fetchHistory FAILED", err))
       .finally(() => setHistoryLoading(false));
   }, [config?.projectId]);
 
   // On mount: fetch history, then restore latest version (terms + fit result)
   useEffect(() => {
     if (!config?.projectId) return;
+    log.info(TAG, `mount — restoring latest model for project ${config.projectId}`);
     let cancelled = false;
 
     (async () => {
@@ -141,18 +151,24 @@ export default function ModelBuilderPage() {
       try {
         const hist = await apiGet<ModelSummary[]>(`/models/${config.projectId}/history`);
         if (cancelled) return;
+        log.info(TAG, `restore: got ${hist.length} history entries`);
         setHistory(hist);
 
-        if (hist.length === 0) return;
+        if (hist.length === 0) {
+          log.info(TAG, "restore: no history — starting fresh");
+          return;
+        }
 
+        log.info(TAG, `restore: loading latest model id=${hist[0].id}`);
         const model = await apiGet<any>(`/models/detail/${hist[0].id}`);
         if (cancelled) return;
 
         const hydrated = hydrateModel(model);
+        log.info(TAG, `restore: hydrated v${hydrated.version} with ${hydrated.terms.length} terms  hasFitResult=${!!hydrated.fitResult}`);
         setTerms(hydrated.terms);
         setCurrentVersion(hydrated.version);
         setFitResult(hydrated.fitResult);
-      } catch (err) { console.error("[ModelBuilder] restore:", err); }
+      } catch (err) { log.error(TAG, "restore FAILED", err); }
       finally { if (!cancelled) setRestoring(false); }
     })();
 
@@ -179,6 +195,7 @@ export default function ModelBuilderPage() {
   // Fetch exploration data on mount
   useEffect(() => {
     if (!config?.datasetPath) return;
+    log.info(TAG, `mount — running exploration  dataset=${config.datasetPath}  response=${config.response}  family=${config.family}`);
     setExplorationLoading(true);
     apiPost<ExplorationData>("/explore", {
       dataset_path: config.datasetPath,
@@ -188,8 +205,12 @@ export default function ModelBuilderPage() {
       split: config.split ?? undefined,
       project_id: config.projectId ?? undefined,
     })
-      .then((data) => { setExploration(data); fetchHistory(); })
-      .catch((err) => console.error("[ModelBuilder] explore:", err))
+      .then((data) => {
+        log.info(TAG, `exploration complete — keys=${Object.keys(data).join(",")}`);
+        setExploration(data);
+        fetchHistory();
+      })
+      .catch((err) => log.error(TAG, "exploration FAILED", err))
       .finally(() => setExplorationLoading(false));
   }, [config]);
 
@@ -253,14 +274,17 @@ export default function ModelBuilderPage() {
   }, [fitResult?.diagnostics?.factors, exploration?.null_diagnostics?.factors]);
 
   const addTerm = useCallback((spec: TermSpec) => {
+    log.info(TAG, `addTerm: column=${spec.column}  type=${spec.type}  df=${spec.df ?? "-"}  mono=${spec.monotonicity ?? "-"}  expr=${spec.expr ?? "-"}`);
     setTerms((prev) => {
       // Replace if same column+type already exists
       const exists = prev.findIndex((t) => t.column === spec.column && t.type === spec.type && t.expr === spec.expr);
       if (exists >= 0) {
+        log.debug(TAG, `addTerm: replacing existing term at index ${exists}`);
         const next = [...prev];
         next[exists] = spec;
         return next;
       }
+      log.debug(TAG, `addTerm: appending new term (total will be ${prev.length + 1})`);
       return [...prev, spec];
     });
     setMenuPos(null);
@@ -269,6 +293,7 @@ export default function ModelBuilderPage() {
   }, []);
 
   const removeTerm = useCallback((col: string, type: TermType, expr?: string) => {
+    log.info(TAG, `removeTerm: column=${col}  type=${type}  expr=${expr ?? "-"}`);
     setTerms((prev) => prev.filter((t) => !(t.column === col && t.type === type && t.expr === expr)));
   }, []);
 
@@ -298,10 +323,13 @@ export default function ModelBuilderPage() {
 
   const handleFit = useCallback(async () => {
     if (!config?.datasetPath || terms.length === 0) return;
+    log.info(TAG, `handleFit: ${terms.length} terms  family=${config.family}  response=${config.response}`);
+    log.debug(TAG, "handleFit terms:", terms.map((t) => `${t.column}(${t.type})`));
     setFitting(true);
     setFitError(null);
     setFitResult(null);
 
+    const t0 = performance.now();
     try {
       const serialized = serializeTerms(terms);
       const data = await apiPost<FitResult>("/fit", {
@@ -314,10 +342,13 @@ export default function ModelBuilderPage() {
         terms: serialized,
         split: config.split ?? undefined,
       });
+      const fitElapsed = Math.round(performance.now() - t0);
+      log.info(TAG, `handleFit SUCCESS in ${fitElapsed}ms  deviance=${data.deviance}  aic=${data.aic}  n_obs=${data.n_obs}`);
       setFitResult(data);
 
       // Auto-save to DB
       if (config.projectId) {
+        log.info(TAG, `auto-saving model to project ${config.projectId}`);
         try {
           const saved = await apiPost<{ version: number }>("/models/save", {
             project_id: config.projectId,
@@ -341,11 +372,14 @@ export default function ModelBuilderPage() {
             coef_table: data.coef_table,
             diagnostics: data.diagnostics,
           });
+          log.info(TAG, `model saved as v${saved.version}`);
           setCurrentVersion(saved.version);
           fetchHistory();
-        } catch (err) { console.error("[ModelBuilder] save:", err); }
+        } catch (err) { log.error(TAG, "auto-save FAILED", err); }
       }
     } catch (err: any) {
+      const fitElapsed = Math.round(performance.now() - t0);
+      log.error(TAG, `handleFit FAILED after ${fitElapsed}ms: ${err.message}`, err);
       setFitError(err.message || "Model fit failed");
     } finally {
       setFitting(false);
@@ -353,18 +387,21 @@ export default function ModelBuilderPage() {
   }, [config, terms]);
 
   const handleRestoreVersion = useCallback(async (modelId: string) => {
+    log.info(TAG, `restoreVersion: modelId=${modelId}`);
     setRestoring(true);
     try {
       const model = await apiGet<any>(`/models/detail/${modelId}`);
       const hydrated = hydrateModel(model);
+      log.info(TAG, `restoreVersion: hydrated v${hydrated.version}  terms=${hydrated.terms.length}  hasFit=${!!hydrated.fitResult}`);
       setTerms(hydrated.terms);
       setCurrentVersion(hydrated.version);
       setFitResult(hydrated.fitResult);
-    } catch (err) { console.error("[ModelBuilder] restore version:", err); }
+    } catch (err) { log.error(TAG, `restoreVersion FAILED for modelId=${modelId}`, err); }
     finally { setRestoring(false); }
   }, []);
 
   const handleFactorClick = useCallback((col: ColumnMeta) => {
+    log.debug(TAG, `factorClick: ${col.name}  is_cat=${col.is_categorical}  is_num=${col.is_numeric}`);
     setSelectedFactor((prev) => prev === col.name ? null : col.name);
     setActiveTab("charts");
   }, []);
@@ -372,6 +409,7 @@ export default function ModelBuilderPage() {
   const handleContextMenu = useCallback((e: React.MouseEvent, col: ColumnMeta) => {
     e.preventDefault();
     e.stopPropagation();
+    log.debug(TAG, `contextMenu: ${col.name}  at (${e.clientX}, ${e.clientY})`);
     setMenuPos({ x: e.clientX, y: e.clientY });
     setMenuCol(col);
     setSubmenuKey(null);
@@ -492,6 +530,7 @@ export default function ModelBuilderPage() {
   }, [menuCol, addTerm]);
 
   if (!config) {
+    log.warn(TAG, "no config in location.state — redirecting to /new");
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">

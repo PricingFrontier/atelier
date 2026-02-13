@@ -20,11 +20,19 @@ router = APIRouter(tags=["models"])
 @router.post("/models/save")
 async def save_model(req: ModelSaveRequest, session: AsyncSession = Depends(get_session)):
     """Persist a fitted model as a new version within its project."""
+    log.info(
+        "[models/save] project_id=%s  response=%s  family=%s  n_terms=%d  "
+        "deviance=%s  aic=%s  n_obs=%s  fit_ms=%s",
+        req.project_id, req.response, req.family, len(req.terms),
+        req.deviance, req.aic, req.n_obs, req.fit_duration_ms,
+    )
     if not req.project_id:
+        log.warning("[models/save] rejected: no project_id")
         raise HTTPException(status_code=400, detail="project_id is required")
 
     project = await session.get(Project, req.project_id)
     if not project:
+        log.warning("[models/save] project not found: %s", req.project_id)
         raise HTTPException(status_code=404, detail="Project not found")
 
     # Determine next version number within this project
@@ -72,10 +80,14 @@ async def save_model(req: ModelSaveRequest, session: AsyncSession = Depends(get_
 
     # Update project version count
     project.n_versions = next_version
+    log.debug("[models/save] committing v%d to DB for project '%s'", next_version, project.name)
     await session.commit()
     await session.refresh(model)
 
-    log.info("Saved model v%d for project '%s'", next_version, project.name)
+    log.info(
+        "[models/save] saved model v%d (id=%s) for project '%s' (id=%s)",
+        next_version, model.id, project.name, req.project_id,
+    )
 
     return {
         "id": model.id,
@@ -177,12 +189,14 @@ def _extract_split_metrics(diag_json: str | None, split: str) -> SplitMetrics:
 @router.get("/models/{project_id}/history")
 async def list_models(project_id: str, session: AsyncSession = Depends(get_session)):
     """Return all saved model versions for a project, newest first, with diffs."""
+    log.info("[models/history] project_id=%s", project_id)
     result = await session.execute(
         select(Model)
         .where(Model.project_id == project_id)
         .order_by(Model.version.asc())
     )
     rows = result.scalars().all()
+    log.info("[models/history] found %d versions for project %s", len(rows), project_id)
 
     summaries: list[dict] = []
     prev_terms: list[dict] = []
@@ -210,15 +224,22 @@ async def list_models(project_id: str, session: AsyncSession = Depends(get_sessi
         prev_terms = curr_terms
 
     summaries.reverse()  # newest first
+    log.debug("[models/history] returning %d summaries", len(summaries))
     return summaries
 
 
 @router.get("/models/detail/{model_id}")
 async def get_model(model_id: str, session: AsyncSession = Depends(get_session)):
     """Return full detail for a single saved model."""
+    log.info("[models/detail] model_id=%s", model_id)
     model = await session.get(Model, model_id)
     if not model:
+        log.warning("[models/detail] model not found: %s", model_id)
         raise HTTPException(status_code=404, detail="Model not found")
+    log.info(
+        "[models/detail] returning model v%d  project_id=%s  status=%s  n_obs=%s",
+        model.version, model.project_id, model.status, model.n_obs,
+    )
 
     return ModelDetail(
         id=model.id,

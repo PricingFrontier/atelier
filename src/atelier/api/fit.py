@@ -62,15 +62,32 @@ def _build_terms_dict(terms: list[TermSpec]) -> dict[str, dict[str, Any]]:
 @router.post("/fit")
 async def fit_model(req: FitRequest):
     """Fit a GLM using rustystats and return results."""
+    log.info(
+        "[fit] request: response=%s  family=%s  link=%s  offset=%s  weights=%s  "
+        "n_terms=%d  split=%s  dataset_path=%s",
+        req.response, req.family, req.link, req.offset, req.weights,
+        len(req.terms), req.split.column if req.split else None, req.dataset_path,
+    )
+    for i, t in enumerate(req.terms):
+        log.debug("[fit] term[%d]: column=%s  type=%s  df=%s  k=%s  mono=%s  expr=%s",
+                  i, t.column, t.type, t.df, t.k, t.monotonicity, t.expr)
+
     df = load_dataframe(Path(req.dataset_path))
+    log.info("[fit] loaded dataframe: rows=%d  cols=%d", df.height, df.width)
 
     # Apply data split
     train_df, validation_df = apply_split(df, req.split)
+    log.info(
+        "[fit] after split: train_rows=%d  validation_rows=%s",
+        train_df.height, validation_df.height if validation_df is not None else "none",
+    )
 
     # Build terms dict
     terms_dict = _build_terms_dict(req.terms)
+    log.debug("[fit] built terms_dict with %d entries: %s", len(terms_dict), list(terms_dict.keys()))
 
     if not terms_dict:
+        log.warning("[fit] rejected: no terms specified")
         raise HTTPException(400, "No terms specified")
 
     # Build kwargs
@@ -88,20 +105,25 @@ async def fit_model(req: FitRequest):
         kwargs["weights"] = req.weights
 
     # Fit
+    log.debug("[fit] calling rs.glm_dict with kwargs keys=%s", list(kwargs.keys()))
     t0 = time.perf_counter()
     try:
         result = rs.glm_dict(**kwargs).fit()
     except Exception as e:
+        fit_ms = int((time.perf_counter() - t0) * 1000)
+        log.error("[fit] rs.glm_dict().fit() FAILED after %dms: %s", fit_ms, e, exc_info=True)
         raise HTTPException(422, f"Model fit failed: {e}")
     fit_ms = int((time.perf_counter() - t0) * 1000)
-    log.info(f"[fit] model fit: {fit_ms}ms")
+    log.info("[fit] model fit completed in %dms", fit_ms)
 
     # Extract results
+    log.debug("[fit] extracting summary and coefficient table")
     summary = result.summary()
 
     # Coefficient table
     params = result.params
     feature_names = result.feature_names
+    log.info("[fit] model has %d parameters / features", len(feature_names))
     try:
         se = result.bse()
     except Exception as exc:
@@ -128,6 +150,8 @@ async def fit_model(req: FitRequest):
             "pvalue": float(pvals[i]) if pvals[i] is not None else None,
         })
 
+    log.debug("[fit] coefficient table built with %d rows", len(coef_table))
+
     # Diagnostics
     try:
         deviance = float(result.deviance)
@@ -150,6 +174,11 @@ async def fit_model(req: FitRequest):
         log.debug("[fit] bic() failed: %s", exc)
         bic = None
 
+    log.info(
+        "[fit] metrics: deviance=%s  null_deviance=%s  aic=%s  bic=%s",
+        deviance, null_deviance, aic, bic,
+    )
+
     # Run diagnostics for all factors
     diagnostics_json: dict[str, Any] | None = None
     try:
@@ -162,6 +191,10 @@ async def fit_model(req: FitRequest):
             reserved.add(req.split.column)
 
         cat_factors, cont_factors = classify_columns(train_df, reserved)
+        log.info(
+            "[fit] diagnostics: %d cat factors, %d cont factors  reserved=%s",
+            len(cat_factors), len(cont_factors), reserved,
+        )
 
         t1 = time.perf_counter()
         diag_kwargs: dict[str, Any] = {
@@ -173,12 +206,19 @@ async def fit_model(req: FitRequest):
             diag_kwargs["test_data"] = validation_df
         diag = result.diagnostics(**diag_kwargs)
         diag_ms = int((time.perf_counter() - t1) * 1000)
-        log.info(f"[fit] diagnostics: {diag_ms}ms")
         diagnostics_json = _json.loads(diag.to_json())
+        log.info(
+            "[fit] diagnostics completed in %dms  diag_keys=%s",
+            diag_ms, list(diagnostics_json.keys()) if diagnostics_json else "none",
+        )
     except Exception as exc:
-        log.warning(f"[fit] diagnostics failed: {exc}")
+        log.warning("[fit] diagnostics failed: %s", exc, exc_info=True)
         diagnostics_json = None
 
+    log.info(
+        "[fit] returning result: n_obs=%d  n_params=%d  n_terms=%d  fit_ms=%d",
+        train_df.height, len(feature_names), len(terms_dict), fit_ms,
+    )
     return {
         "success": True,
         "fit_duration_ms": fit_ms,
