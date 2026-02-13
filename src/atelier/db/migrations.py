@@ -11,6 +11,8 @@ async def ensure_schema() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
     # Lightweight column migrations for SQLite (ALTER TABLE ADD COLUMN).
+    # SAFETY: table/column/type values below are compile-time constants only.
+    # Never use dynamic or user-supplied input here.
     _COLUMN_MIGRATIONS: list[tuple[str, str, str]] = [
         ("models", "df_model", "REAL"),
         ("models", "df_resid", "REAL"),

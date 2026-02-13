@@ -1,12 +1,12 @@
 [project]
 name = "atel"
-version = "0.1.0"
+version = "0.1.1"
 description = "Browser-based GLM workbench for actuarial pricing"
 readme = "README.md"
 license = { text = "Elastic-2.0" }
 requires-python = ">=3.13"
 dependencies = [
-    "rustystats>=0.4.10",
+    "rustystats>=0.4.11",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
     "python-multipart>=0.0.18",

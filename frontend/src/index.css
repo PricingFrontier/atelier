@@ -98,3 +98,9 @@ body {
   from { opacity: 0; transform: translateX(-8px); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+/* Performance: isolate fixed background decorations from paint */
+.bg-layer-contained {
+  contain: strict;
+  pointer-events: none;
+}

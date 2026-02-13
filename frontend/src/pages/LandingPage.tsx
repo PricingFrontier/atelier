@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Plus, Clock, GitBranch, ArrowRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { apiGet, apiDelete } from "@/lib/api";
+import PageBackground from "@/components/ui/PageBackground";
 import type { ProjectSummary } from "@/types";
 
 export default function LandingPage() {
@@ -8,14 +10,15 @@ export default function LandingPage() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
 
   useEffect(() => {
-    fetch("/api/projects")
-      .then((r) => (r.ok ? r.json() : []))
+    apiGet<ProjectSummary[]>("/projects")
       .then(setProjects)
-      .catch(() => {});
+      .catch((err) => console.error("[LandingPage] fetch projects:", err));
   }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (e.key === "n" || e.key === "N") navigate("/new");
     }
     window.addEventListener("keydown", onKey);
@@ -24,9 +27,7 @@ export default function LandingPage() {
 
   const handleLoadProject = async (p: ProjectSummary) => {
     try {
-      const res = await fetch(`/api/projects/${p.id}`);
-      if (!res.ok) return;
-      const detail = await res.json();
+      const detail = await apiGet<any>(`/projects/${p.id}`);
       const cfg = detail.config;
       if (!cfg) return;
 
@@ -45,46 +46,32 @@ export default function LandingPage() {
           split: cfg.split ?? null,
         },
       });
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("[LandingPage] load project:", err);
+    }
   };
 
   const handleDeleteProject = async (id: string) => {
     try {
-      const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setProjects((prev) => prev.filter((p) => p.id !== id));
-      }
-    } catch { /* ignore */ }
+      await apiDelete(`/projects/${id}`);
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("[LandingPage] delete project:", err);
+    }
   };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
-      {/* Noise overlay */}
-      <div
-        className="pointer-events-none fixed inset-0 z-50 opacity-[0.025]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }}
+      <PageBackground
+        noiseOpacity={0.025}
+        gridOpacity={0.15}
+        gridMask="radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%)"
+        blobs={[
+          { className: "absolute top-[30%] left-[20%] h-[600px] w-[600px] animate-[auroraFloat1_12s_ease-in-out_infinite] rounded-full bg-blue-500 opacity-[0.07] blur-[120px]" },
+          { className: "absolute top-[40%] right-[15%] h-[500px] w-[500px] animate-[auroraFloat2_14s_ease-in-out_infinite] rounded-full bg-violet-500 opacity-[0.07] blur-[120px]" },
+          { className: "absolute bottom-[20%] left-[40%] h-[400px] w-[400px] animate-[auroraFloat3_10s_ease-in-out_infinite] rounded-full bg-cyan-500 opacity-[0.07] blur-[120px]" },
+        ]}
       />
-
-      {/* Grid background */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-15"
-        style={{
-          backgroundImage:
-            "linear-gradient(#1e1e22 1px, transparent 1px), linear-gradient(90deg, #1e1e22 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-          maskImage: "radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%)",
-          WebkitMaskImage: "radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%)",
-        }}
-      />
-
-      {/* Aurora blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute top-[30%] left-[20%] h-[600px] w-[600px] animate-[auroraFloat1_12s_ease-in-out_infinite] rounded-full bg-blue-500 opacity-[0.07] blur-[120px]" />
-        <div className="absolute top-[40%] right-[15%] h-[500px] w-[500px] animate-[auroraFloat2_14s_ease-in-out_infinite] rounded-full bg-violet-500 opacity-[0.07] blur-[120px]" />
-        <div className="absolute bottom-[20%] left-[40%] h-[400px] w-[400px] animate-[auroraFloat3_10s_ease-in-out_infinite] rounded-full bg-cyan-500 opacity-[0.07] blur-[120px]" />
-      </div>
 
       {/* Chart decoration */}
       <div className="pointer-events-none fixed bottom-0 left-0 w-full animate-[fadeIn_1.5s_ease-out_1s_both]">

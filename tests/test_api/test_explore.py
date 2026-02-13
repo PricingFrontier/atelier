@@ -22,7 +22,7 @@ class TestExploreEndpoint:
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
         })
         assert resp.status_code == 200
         data = resp.json()
@@ -42,7 +42,7 @@ class TestExploreEndpoint:
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
         })
         data = resp.json()
         stats_by_name = {f["name"]: f for f in data["factor_stats"]}
@@ -57,7 +57,7 @@ class TestExploreEndpoint:
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
         })
         data = resp.json()
         region = next(f for f in data["factor_stats"] if f["name"] == "Region")
@@ -74,7 +74,7 @@ class TestExploreEndpoint:
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
         })
         data = resp.json()
         stats_by_name = {f["name"]: f for f in data["factor_stats"]}
@@ -95,14 +95,14 @@ class TestExploreEndpoint:
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
         })
         # Explore with split (groups 1-3 = train)
         resp_split = await client.post("/api/explore", json={
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
             "split": {
                 "column": "Group",
                 "mapping": {"1": "train", "2": "train", "3": "train", "4": "validation", "5": "holdout"},
@@ -121,7 +121,7 @@ class TestExploreEndpoint:
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
             "split": {
                 "column": "Group",
                 "mapping": {"1": "train", "2": "train", "3": "train", "4": "validation", "5": "holdout"},
@@ -159,7 +159,7 @@ class TestExploreEndpoint:
             "dataset_path": path,
             "response": "ClaimNb",
             "family": "poisson",
-            "exposure": "Exposure",
+            "offset": "Exposure",
         })
         assert resp.status_code == 200
         data = resp.json()

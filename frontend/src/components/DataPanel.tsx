@@ -3,10 +3,11 @@
  * Shows response stats, zero inflation, overdispersion, VIF, correlations, Cramér's V.
  */
 
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import type { ExplorationData } from "@/types";
 
-export default function DataPanel({ exploration }: { exploration: ExplorationData }) {
+export default memo(function DataPanel({ exploration }: { exploration: ExplorationData }) {
   const { data_summary, factor_stats, zero_inflation, overdispersion, response_stats, vif, correlations, cramers_v } = exploration;
 
   return (
@@ -43,7 +44,7 @@ export default function DataPanel({ exploration }: { exploration: ExplorationDat
       {factor_stats && factor_stats.length > 0 && <FactorSummaryTable factors={factor_stats} />}
     </div>
   );
-}
+})
 
 /* ── Stat card ────────────────────────────────────────── */
 

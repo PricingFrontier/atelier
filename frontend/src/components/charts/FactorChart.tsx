@@ -2,6 +2,7 @@
  * Reusable bar+line chart for factor-level data (diagnostics and exploration).
  */
 
+import { memo } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -30,7 +31,7 @@ export interface ChartRow {
   [k: string]: any;
 }
 
-export default function FactorChart({
+export default memo(function FactorChart({
   title,
   data,
   hasExposure,
@@ -99,4 +100,4 @@ export default function FactorChart({
       </div>
     </div>
   );
-}
+})

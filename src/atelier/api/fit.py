@@ -104,11 +104,18 @@ async def fit_model(req: FitRequest):
     feature_names = result.feature_names
     try:
         se = result.bse()
-        tvals = result.tvalues()
-        pvals = result.pvalues()
-    except Exception:
+    except Exception as exc:
+        log.debug("[fit] bse() failed: %s", exc)
         se = [None] * len(params)
+    try:
+        tvals = result.tvalues()
+    except Exception as exc:
+        log.debug("[fit] tvalues() failed: %s", exc)
         tvals = [None] * len(params)
+    try:
+        pvals = result.pvalues()
+    except Exception as exc:
+        log.debug("[fit] pvalues() failed: %s", exc)
         pvals = [None] * len(params)
 
     coef_table = []
@@ -124,19 +131,23 @@ async def fit_model(req: FitRequest):
     # Diagnostics
     try:
         deviance = float(result.deviance)
-    except Exception:
+    except Exception as exc:
+        log.debug("[fit] deviance extraction failed: %s", exc)
         deviance = None
     try:
         null_deviance = float(result.null_deviance())
-    except Exception:
+    except Exception as exc:
+        log.debug("[fit] null_deviance() failed: %s", exc)
         null_deviance = None
     try:
         aic = float(result.aic())
-    except Exception:
+    except Exception as exc:
+        log.debug("[fit] aic() failed: %s", exc)
         aic = None
     try:
         bic = float(result.bic())
-    except Exception:
+    except Exception as exc:
+        log.debug("[fit] bic() failed: %s", exc)
         bic = None
 
     # Run diagnostics for all factors

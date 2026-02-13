@@ -1,5 +1,7 @@
 """Pydantic schemas for model save / history endpoints."""
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 from atelier.schemas.model_spec import SplitSpec, TermSpec
@@ -38,7 +40,7 @@ class ModelSaveRequest(BaseModel):
 class VersionChange(BaseModel):
     """A single diff item between consecutive versions."""
 
-    kind: str  # "added", "removed", "modified"
+    kind: Literal["added", "removed", "modified"]
     description: str  # e.g. "+VehPower (spline, df=5)"
 
 

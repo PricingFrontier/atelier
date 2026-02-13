@@ -16,6 +16,8 @@ import {
   Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiPost, apiPut, apiUpload } from "@/lib/api";
+import PageBackground from "@/components/ui/PageBackground";
 import {
   FAMILY_OPTIONS,
   LINK_OPTIONS,
@@ -84,11 +86,17 @@ export default function ModelConfigPage() {
   const [splitMapping, setSplitMapping] = useState<Record<string, "train" | "validation" | "holdout" | null>>(prev?.split?.mapping ?? {});
   const [loadingValues, setLoadingValues] = useState(false);
 
-  // Mouse glow
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  // Mouse glow — use ref to avoid re-renders
+  const glowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const handler = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
-    window.addEventListener("mousemove", handler);
+    const handler = (e: MouseEvent) => {
+      const el = glowRef.current;
+      if (el) {
+        el.style.left = e.clientX + "px";
+        el.style.top = e.clientY + "px";
+      }
+    };
+    window.addEventListener("mousemove", handler, { passive: true });
     return () => window.removeEventListener("mousemove", handler);
   }, []);
 
@@ -101,24 +109,16 @@ export default function ModelConfigPage() {
       return;
     }
     setLoadingValues(true);
-    fetch("/api/datasets/column-values", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dataset_path: datasetPath, column: splitColumn }),
-    })
-      .then((r) => r.ok ? r.json() : null)
+    apiPost<{ values: string[] }>("/datasets/column-values", { dataset_path: datasetPath, column: splitColumn })
       .then((data) => {
-        if (data?.values) {
-          setSplitValues(data.values);
-          if (restoredSplitRef.current) {
-            // First load with restored config — keep the saved mapping
-            restoredSplitRef.current = false;
-          } else {
-            setSplitMapping(Object.fromEntries(data.values.map((v: string) => [v, null])));
-          }
+        setSplitValues(data.values);
+        if (restoredSplitRef.current) {
+          restoredSplitRef.current = false;
+        } else {
+          setSplitMapping(Object.fromEntries(data.values.map((v: string) => [v, null])));
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error("[ModelConfig] column values:", err))
       .finally(() => setLoadingValues(false));
   }, [splitColumn, datasetPath]);
 
@@ -135,14 +135,7 @@ export default function ModelConfigPage() {
     setUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", f);
-      const res = await fetch("/api/datasets/upload", { method: "POST", body: formData });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || "Upload failed");
-      }
-      const data = await res.json();
+      const data = await apiUpload<{ columns: ColumnMeta[]; file_path: string }>("/datasets/upload", f);
       setColumns(data.columns);
       setDatasetPath(data.file_path);
     } catch (err: any) {
@@ -174,53 +167,33 @@ export default function ModelConfigPage() {
 
   const handleContinue = async () => {
     const splitConfig = splitColumn ? { column: splitColumn, mapping: splitMapping } : null;
+    const configPayload = {
+      dataset_path: datasetPath,
+      response,
+      family,
+      link: effectiveLink,
+      offset,
+      weights,
+      split: splitConfig,
+      columns,
+    };
 
     let pid = projectId;
     if (!pid) {
-      // Create a new project
       try {
-        const res = await fetch("/api/projects", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: projectName.trim(),
-            config: {
-              dataset_path: datasetPath,
-              response,
-              family,
-              link: effectiveLink,
-              offset,
-              weights,
-              split: splitConfig,
-              columns,
-            },
-          }),
+        const data = await apiPost<{ id: string }>("/projects", {
+          name: projectName.trim(),
+          config: configPayload,
         });
-        if (!res.ok) return;
-        const data = await res.json();
         pid = data.id;
         setProjectId(pid);
-      } catch {
+      } catch (err) {
+        console.error("[ModelConfig] create project:", err);
         return;
       }
     } else {
-      // Update existing project config
-      fetch(`/api/projects/${pid}/config`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          config: {
-            dataset_path: datasetPath,
-            response,
-            family,
-            link: effectiveLink,
-            offset,
-            weights,
-            split: splitConfig,
-            columns,
-          },
-        }),
-      }).catch(() => {});
+      apiPut(`/projects/${pid}/config`, { config: configPayload })
+        .catch((err) => console.error("[ModelConfig] update config:", err));
     }
 
     navigate("/model", {
@@ -239,42 +212,15 @@ export default function ModelConfigPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
-      {/* Noise texture */}
-      <div
-        className="pointer-events-none fixed inset-0 z-50 opacity-[0.02]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }}
-      />
-
-      {/* Subtle grid */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            "linear-gradient(#1e1e22 1px, transparent 1px), linear-gradient(90deg, #1e1e22 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-          maskImage: "radial-gradient(ellipse 50% 60% at 50% 30%, black 10%, transparent 100%)",
-          WebkitMaskImage: "radial-gradient(ellipse 50% 60% at 50% 30%, black 10%, transparent 100%)",
-        }}
-      />
-
-      {/* Ambient glow blobs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-32 left-[10%] h-[500px] w-[500px] animate-[auroraFloat1_12s_ease-in-out_infinite] rounded-full bg-blue-500 opacity-[0.04] blur-[120px]" />
-        <div className="absolute top-[60%] right-[5%] h-[400px] w-[400px] animate-[auroraFloat2_14s_ease-in-out_infinite] rounded-full bg-violet-500 opacity-[0.04] blur-[120px]" />
-      </div>
-
-      {/* Cursor glow */}
-      <div
-        className="pointer-events-none fixed z-[1] h-[400px] w-[400px] rounded-full"
-        style={{
-          left: mousePos.x,
-          top: mousePos.y,
-          transform: "translate(-50%, -50%)",
-          background: "radial-gradient(circle, hsl(210 100% 60% / 0.04) 0%, transparent 70%)",
-          transition: "left 0.2s ease-out, top 0.2s ease-out",
-        }}
+      <PageBackground
+        ref={glowRef}
+        gridOpacity={0.10}
+        gridMask="radial-gradient(ellipse 50% 60% at 50% 30%, black 10%, transparent 100%)"
+        blobs={[
+          { className: "absolute -top-32 left-[10%] h-[500px] w-[500px] animate-[auroraFloat1_12s_ease-in-out_infinite] rounded-full bg-blue-500 opacity-[0.04] blur-[120px]" },
+          { className: "absolute top-[60%] right-[5%] h-[400px] w-[400px] animate-[auroraFloat2_14s_ease-in-out_infinite] rounded-full bg-violet-500 opacity-[0.04] blur-[120px]" },
+        ]}
+        cursorGlow
       />
 
       {/* Header */}

@@ -1,8 +1,27 @@
+import os
+import subprocess
+import sys
 import threading
 import webbrowser
 
 import click
 import uvicorn
+
+
+def _open_browser(url: str) -> None:
+    """Open *url* in the default browser, suppressing noisy stderr from helpers like gio."""
+    try:
+        devnull = open(os.devnull, "w")
+        if sys.platform == "linux":
+            subprocess.Popen(
+                ["xdg-open", url], stdout=devnull, stderr=devnull
+            )
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", url], stdout=devnull, stderr=devnull)
+        else:
+            webbrowser.open(url)
+    except Exception:
+        webbrowser.open(url)
 
 
 @click.command()
@@ -14,7 +33,7 @@ def main(port: int, host: str, no_browser: bool) -> None:
     url = f"http://{host}:{port}"
 
     if not no_browser:
-        threading.Timer(1.5, webbrowser.open, args=(url,)).start()
+        threading.Timer(1.5, _open_browser, args=(url,)).start()
 
     uvicorn.run(
         "atelier.app:create_app",

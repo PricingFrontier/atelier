@@ -3,7 +3,7 @@
  * Shows warnings, train/test metrics, lift chart, model comparison, and coefficient table.
  */
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -46,7 +46,7 @@ const WARNING_ICONS: Record<string, typeof AlertTriangle> = {
 
 /* ── Main component ───────────────────────────────────── */
 
-export default function ModelPanel({ result, nullDiagnostics }: { result?: FitResult | null; nullDiagnostics?: DiagnosticsData | null }) {
+export default memo(function ModelPanel({ result, nullDiagnostics }: { result?: FitResult | null; nullDiagnostics?: DiagnosticsData | null }) {
   const diag = result?.diagnostics ?? nullDiagnostics ?? null;
   const train = diag?.train_test?.train;
   const test = diag?.train_test?.test;
@@ -88,7 +88,7 @@ export default function ModelPanel({ result, nullDiagnostics }: { result?: FitRe
       {result ? (
         <MetricsGrid train={train} test={test} result={result} />
       ) : train ? (
-        <NullMetricsGrid train={train} test={test} />
+        <MetricsGrid train={train} test={test} isBaseline />
       ) : null}
 
       {/* Model comparison */}
@@ -98,14 +98,12 @@ export default function ModelPanel({ result, nullDiagnostics }: { result?: FitRe
       {liftChart && <LiftChartSection liftChart={liftChart} />}
 
       {/* Coefficient table with relativities */}
-      {coefSummary && coefSummary.length > 0 ? (
-        <CoefficientTable coefs={coefSummary} vif={vif} />
-      ) : result ? (
-        <BasicCoefficientTable result={result} />
+      {(coefSummary && coefSummary.length > 0) || result ? (
+        <CoefficientTable coefs={coefSummary} vif={vif} result={result} />
       ) : null}
     </div>
   );
-}
+})
 
 /* ── Warnings banner ──────────────────────────────────── */
 
@@ -144,70 +142,50 @@ function WarningsBanner({ warnings }: { warnings: DiagnosticsData["warnings"] & 
   );
 }
 
-/* ── Train/test metrics grid ──────────────────────────── */
+/* ── Unified metrics grid (handles both model and null/baseline) ── */
 
 function MetricsGrid({
   train,
   test,
   result,
+  isBaseline = false,
 }: {
   train: DiagnosticsData["train_test"]["train"] | undefined;
   test: DiagnosticsData["train_test"]["test"];
-  result: FitResult;
+  result?: FitResult;
+  isBaseline?: boolean;
 }) {
   const hasTest = !!test;
+  const valColor = isBaseline ? "text-foreground/50" : "text-foreground";
 
   const metrics = [
     {
       label: "Mean Deviance",
-      train: train?.loss ?? (result.deviance != null ? result.deviance / result.n_obs : null),
+      train: train?.loss ?? (result?.deviance != null ? result.deviance / result.n_obs : null),
       test: test?.loss ?? null,
       dp: 4,
       lower_better: true,
     },
-    {
-      label: "Gini",
-      train: train?.gini ?? null,
-      test: test?.gini ?? null,
-      dp: 4,
-      lower_better: false,
-    },
-    {
-      label: "AUC",
-      train: train?.auc ?? null,
-      test: test?.auc ?? null,
-      dp: 4,
-      lower_better: false,
-    },
-    {
-      label: "A/E Ratio",
-      train: train?.ae_ratio ?? null,
-      test: test?.ae_ratio ?? null,
-      dp: 4,
-      lower_better: false,
-      target: 1.0,
-    },
+    { label: "Gini", train: train?.gini ?? null, test: test?.gini ?? null, dp: 4, lower_better: false },
+    { label: "AUC", train: train?.auc ?? null, test: test?.auc ?? null, dp: 4, lower_better: false },
+    { label: "A/E Ratio", train: train?.ae_ratio ?? null, test: test?.ae_ratio ?? null, dp: 4, lower_better: false, target: 1.0 },
     {
       label: "AIC",
-      train: train?.aic ?? result.aic ?? null,
+      train: train?.aic ?? result?.aic ?? null,
       test: test?.aic ?? null,
       dp: 1,
       lower_better: true,
     },
-    {
-      label: "Log-Likelihood",
-      train: train?.log_likelihood ?? null,
-      test: test?.log_likelihood ?? null,
-      dp: 1,
-      lower_better: false,
-    },
+    { label: "Log-Likelihood", train: train?.log_likelihood ?? null, test: test?.log_likelihood ?? null, dp: 1, lower_better: false },
   ];
 
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
       <div className="border-b border-white/[0.06] px-4 py-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-          Model Metrics
+          {isBaseline
+            ? <>Baseline Metrics <span className="font-normal text-muted-foreground/30">(null model)</span></>
+            : "Model Metrics"}
         </h3>
       </div>
       <div className="overflow-x-auto">
@@ -233,79 +211,14 @@ function MetricsGrid({
             {metrics.map((m) => (
               <tr key={m.label} className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]">
                 <td className="px-4 py-2.5 text-[0.75rem] text-foreground/70">{m.label}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-[0.75rem] text-foreground">
+                <td className={`px-4 py-2.5 text-right font-mono text-[0.75rem] ${valColor}`}>
                   {fmt(m.train, m.dp)}
                 </td>
                 {hasTest && (
                   <td className="px-4 py-2.5 text-right font-mono text-[0.75rem]">
-                    <MetricDelta value={m.test} trainValue={m.train} dp={m.dp} lowerBetter={m.lower_better} target={m.target} />
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/* ── Null model metrics grid (no FitResult needed) ──── */
-
-function NullMetricsGrid({
-  train,
-  test,
-}: {
-  train: DiagnosticsData["train_test"]["train"];
-  test: DiagnosticsData["train_test"]["test"];
-}) {
-  const hasTest = !!test;
-
-  const metrics = [
-    { label: "Mean Deviance", train: train.loss, test: test?.loss ?? null, dp: 4 },
-    { label: "Gini", train: train.gini, test: test?.gini ?? null, dp: 4 },
-    { label: "AUC", train: train.auc, test: test?.auc ?? null, dp: 4 },
-    { label: "A/E Ratio", train: train.ae_ratio, test: test?.ae_ratio ?? null, dp: 4 },
-    { label: "AIC", train: train.aic, test: test?.aic ?? null, dp: 1 },
-    { label: "Log-Likelihood", train: train.log_likelihood, test: test?.log_likelihood ?? null, dp: 1 },
-  ];
-
-  return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
-      <div className="border-b border-white/[0.06] px-4 py-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-          Baseline Metrics <span className="font-normal text-muted-foreground/30">(null model)</span>
-        </h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-white/[0.06] text-[0.65rem] uppercase tracking-wider text-muted-foreground/40">
-              <th className="px-4 py-2.5 text-left font-semibold">Metric</th>
-              <th className="px-4 py-2.5 text-right font-semibold">
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> Train
-                </span>
-              </th>
-              {hasTest && (
-                <th className="px-4 py-2.5 text-right font-semibold">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Test
-                  </span>
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {metrics.map((m) => (
-              <tr key={m.label} className="border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]">
-                <td className="px-4 py-2.5 text-[0.75rem] text-foreground/70">{m.label}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-[0.75rem] text-foreground/50">
-                  {fmt(m.train, m.dp)}
-                </td>
-                {hasTest && (
-                  <td className="px-4 py-2.5 text-right font-mono text-[0.75rem] text-foreground/50">
-                    {fmt(m.test, m.dp)}
+                    {isBaseline
+                      ? <span className="text-foreground/50">{fmt(m.test, m.dp)}</span>
+                      : <MetricDelta value={m.test} trainValue={m.train} dp={m.dp} lowerBetter={m.lower_better} target={m.target} />}
                   </td>
                 )}
               </tr>
@@ -478,18 +391,53 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
 function CoefficientTable({
   coefs,
   vif,
+  result,
 }: {
-  coefs: CoefficientSummaryEntry[];
+  coefs?: CoefficientSummaryEntry[];
   vif?: DiagnosticsData["vif"];
+  result?: FitResult | null;
 }) {
+  const hasDiag = coefs && coefs.length > 0;
   const vifMap = new Map<string, number>();
   if (vif) for (const v of vif) vifMap.set(v.feature, v.vif);
+
+  // Build unified rows from either diagnostics coefs or basic coef_table
+  const rows: Array<{
+    key: string;
+    name: string;
+    estimate: number | null;
+    se: number | null;
+    z: number | null;
+    p: number | null;
+    relativity?: number;
+    ci?: [number, number];
+  }> = hasDiag
+    ? coefs.map((c) => ({
+        key: c.feature,
+        name: c.feature,
+        estimate: c.estimate,
+        se: c.std_error,
+        z: c.z_value,
+        p: c.p_value,
+        relativity: c.relativity,
+        ci: c.relativity_ci,
+      }))
+    : (result?.coef_table ?? []).map((c) => ({
+        key: c.name,
+        name: c.name,
+        estimate: c.coef,
+        se: c.se,
+        z: c.z,
+        p: c.pvalue,
+      }));
+
+  if (rows.length === 0) return null;
 
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
       <div className="border-b border-white/[0.06] px-4 py-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-          Coefficients ({coefs.length})
+          Coefficients ({rows.length})
         </h3>
       </div>
       <div className="overflow-x-auto">
@@ -501,40 +449,45 @@ function CoefficientTable({
               <th className="px-4 py-2.5 text-right font-semibold">Std Error</th>
               <th className="px-4 py-2.5 text-right font-semibold">z-value</th>
               <th className="px-4 py-2.5 text-right font-semibold">P(&gt;|z|)</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Relativity</th>
-              <th className="px-4 py-2.5 text-right font-semibold">95% CI</th>
-              {vifMap.size > 0 && <th className="px-4 py-2.5 text-right font-semibold">VIF</th>}
+              {hasDiag && <th className="px-4 py-2.5 text-right font-semibold">Relativity</th>}
+              {hasDiag && <th className="px-4 py-2.5 text-right font-semibold">95% CI</th>}
+              {hasDiag && vifMap.size > 0 && <th className="px-4 py-2.5 text-right font-semibold">VIF</th>}
               <th className="px-4 py-2.5 text-right font-semibold">Sig</th>
             </tr>
           </thead>
           <tbody>
-            {coefs.map((row, i) => {
-              const sig = row.p_value < 0.001 ? "***" : row.p_value < 0.01 ? "**" : row.p_value < 0.05 ? "*" : row.p_value < 0.1 ? "." : "";
-              const vifVal = vifMap.get(row.feature);
+            {rows.map((row, i) => {
+              const pVal = row.p ?? 1;
+              const sig = pVal < 0.001 ? "***" : pVal < 0.01 ? "**" : pVal < 0.05 ? "*" : pVal < 0.1 ? "." : "";
+              const vifVal = vifMap.get(row.name);
               return (
                 <tr
-                  key={row.feature}
+                  key={row.key}
                   className={cn(
                     "border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]",
                     i % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
                   )}
-                  style={{ animation: `fadeUp 0.2s ease-out ${0.02 * i}s both` }}
+                  style={{ animation: `fadeUp 0.2s ease-out ${Math.min(0.02 * i, 0.6)}s both` }}
                 >
-                  <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{row.feature}</td>
+                  <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{row.name}</td>
                   <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-foreground">{fmt(row.estimate, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.std_error, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.z_value, 3)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{pFmt(row.p_value)}</td>
-                  <td className={cn(
-                    "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
-                    row.relativity > 1 ? "text-red-400/80" : row.relativity < 1 ? "text-emerald-400/80" : "text-foreground/60"
-                  )}>
-                    {fmt(row.relativity, 4)}
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.6rem] text-muted-foreground/40">
-                    [{fmt(row.relativity_ci[0], 4)}, {fmt(row.relativity_ci[1], 4)}]
-                  </td>
-                  {vifMap.size > 0 && (
+                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.se, 6)}</td>
+                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.z, 3)}</td>
+                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{row.p != null ? pFmt(row.p) : fmt(null, 4)}</td>
+                  {hasDiag && (
+                    <td className={cn(
+                      "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
+                      row.relativity != null && row.relativity > 1 ? "text-red-400/80" : row.relativity != null && row.relativity < 1 ? "text-emerald-400/80" : "text-foreground/60"
+                    )}>
+                      {fmt(row.relativity ?? null, 4)}
+                    </td>
+                  )}
+                  {hasDiag && (
+                    <td className="px-4 py-2 text-right font-mono text-[0.6rem] text-muted-foreground/40">
+                      {row.ci ? `[${fmt(row.ci[0], 4)}, ${fmt(row.ci[1], 4)}]` : "—"}
+                    </td>
+                  )}
+                  {hasDiag && vifMap.size > 0 && (
                     <td className={cn(
                       "px-4 py-2 text-right font-mono text-[0.75rem]",
                       vifVal != null && vifVal > 5 ? "text-red-400" : vifVal != null && vifVal > 2.5 ? "text-amber-400" : "text-muted-foreground/40"
@@ -542,66 +495,6 @@ function CoefficientTable({
                       {vifVal != null ? fmt(vifVal, 2) : "—"}
                     </td>
                   )}
-                  <td className={cn(
-                    "px-4 py-2 text-right font-mono text-[0.75rem] font-bold",
-                    sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400/70" : sig.includes("*") ? "text-blue-400/60" : "text-muted-foreground/30"
-                  )}>
-                    {sig || ""}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="border-t border-white/[0.06] px-4 py-2 text-[0.6rem] text-muted-foreground/30">
-        Signif. codes: *** 0.001 ** 0.01 * 0.05 . 0.1
-      </div>
-    </div>
-  );
-}
-
-/* ── Fallback: basic coefficient table (no diagnostics) ── */
-
-function BasicCoefficientTable({ result }: { result: FitResult }) {
-  return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02]">
-      <div className="border-b border-white/[0.06] px-4 py-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-          Coefficients ({result.coef_table.length})
-        </h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-white/[0.06] text-[0.65rem] uppercase tracking-wider text-muted-foreground/40">
-              <th className="px-4 py-2.5 text-left font-semibold">Parameter</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Estimate</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Std Error</th>
-              <th className="px-4 py-2.5 text-right font-semibold">z-value</th>
-              <th className="px-4 py-2.5 text-right font-semibold">P(&gt;|z|)</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Sig</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.coef_table.map((row, i) => {
-              const sig = row.pvalue != null
-                ? row.pvalue < 0.001 ? "***" : row.pvalue < 0.01 ? "**" : row.pvalue < 0.05 ? "*" : row.pvalue < 0.1 ? "." : ""
-                : "";
-              return (
-                <tr
-                  key={row.name}
-                  className={cn(
-                    "border-b border-white/[0.03] transition-colors hover:bg-white/[0.03]",
-                    i % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
-                  )}
-                  style={{ animation: `fadeUp 0.2s ease-out ${0.02 * i}s both` }}
-                >
-                  <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{row.name}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-foreground">{fmt(row.coef, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.se, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.z, 3)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground/60">{fmt(row.pvalue, 4)}</td>
                   <td className={cn(
                     "px-4 py-2 text-right font-mono text-[0.75rem] font-bold",
                     sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400/70" : sig.includes("*") ? "text-blue-400/60" : "text-muted-foreground/30"

@@ -2,13 +2,13 @@
  * Panel showing exploration and diagnostics charts for a selected factor.
  */
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Hash, Type, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ColumnMeta, ExplorationData, DiagnosticsData, FactorDiagnostic } from "@/types";
 import FactorChart from "./FactorChart";
 
-export default function FactorChartsPanel({
+export default memo(function FactorChartsPanel({
   selectedFactor,
   exploration,
   diagnostics,
@@ -184,7 +184,7 @@ export default function FactorChartsPanel({
       )}
     </div>
   );
-}
+})
 
 /* ── Factor diagnostic info panels ────────────────────── */
 
@@ -263,7 +263,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
             </div>
             <div className="text-right">
               <p className="font-mono text-sm font-semibold text-foreground">
-                {devPct != null ? `${devPct.toFixed(2)}%` : `Δ${diag.significance.dev_contrib.toFixed(0)}`}
+                {(devPct ?? diag.significance.dev_pct).toFixed(2)}%
               </p>
               <p className="text-[0.6rem] text-muted-foreground/40">
                 χ²={diag.significance.chi2.toFixed(2)}, p={diag.significance.p < 0.0001 ? "<0.0001" : diag.significance.p.toFixed(4)}

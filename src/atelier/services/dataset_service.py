@@ -10,6 +10,15 @@ from atelier.schemas import SplitSpec
 
 log = logging.getLogger(__name__)
 
+DEFAULT_CAT_THRESHOLD = 50
+
+
+def _is_categorical(s: pl.Series, threshold: int = DEFAULT_CAT_THRESHOLD) -> bool:
+    """Heuristic: treat string columns and low-cardinality integers as categorical."""
+    return s.dtype in (pl.Utf8, pl.Categorical, pl.String) or (
+        s.dtype.is_numeric() and s.n_unique() <= threshold
+    )
+
 
 def load_dataframe(path: Path) -> pl.DataFrame:
     """Load a CSV or Parquet file into a polars DataFrame."""
@@ -24,15 +33,28 @@ def load_dataframe(path: Path) -> pl.DataFrame:
         raise HTTPException(400, f"Failed to read dataset: {e}")
 
 
+def load_column(path: Path, column: str) -> pl.Series:
+    """Load a single column from a CSV or Parquet file."""
+    if not path.exists():
+        raise HTTPException(400, f"Dataset not found: {path}")
+    try:
+        if path.suffix == ".parquet":
+            df = pl.read_parquet(path, columns=[column])
+        else:
+            df = pl.read_csv(path, columns=[column])
+    except Exception as e:
+        raise HTTPException(400, f"Failed to read column: {e}")
+    if column not in df.columns:
+        raise HTTPException(400, f"Column '{column}' not found")
+    return df[column]
+
+
 def column_meta(df: pl.DataFrame) -> list[dict]:
     """Extract column metadata from a polars DataFrame."""
     cols = []
     for name in df.columns:
         s = df[name]
-        is_cat = s.dtype in (pl.Utf8, pl.Categorical, pl.String) or (
-            s.dtype in (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)
-            and s.n_unique() <= 50
-        )
+        is_cat = _is_categorical(s)
         is_num = s.dtype.is_numeric()
         cols.append(
             {
@@ -62,10 +84,7 @@ def classify_columns(
         if col_name in reserved:
             continue
         s = df[col_name]
-        is_cat = s.dtype in (pl.Utf8, pl.Categorical, pl.String) or (
-            s.dtype.is_numeric() and s.n_unique() <= cat_threshold
-        )
-        if is_cat:
+        if _is_categorical(s, cat_threshold):
             cat_factors.append(col_name)
         elif s.dtype.is_numeric():
             cont_factors.append(col_name)

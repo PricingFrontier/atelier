@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -22,6 +22,7 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiGet, apiPost } from "@/lib/api";
 import type {
   ColumnMeta,
   ModelConfig,
@@ -41,6 +42,57 @@ import { FactorChartsPanel } from "@/components/charts";
 import ModelPanel from "@/components/ModelPanel";
 import DataPanel from "@/components/DataPanel";
 import ContextMenu from "@/components/ui/ContextMenu";
+import PageBackground from "@/components/ui/PageBackground";
+
+/** Convert a model detail response into terms array + optional FitResult. */
+function hydrateModel(model: any): { terms: TermSpec[]; fitResult: FitResult | null; version: number } {
+  const specTerms = model.spec?.terms ?? [];
+  const terms: TermSpec[] = specTerms.map((t: any) => ({
+    column: t.column,
+    type: t.type,
+    df: t.df ?? undefined,
+    k: t.k ?? undefined,
+    monotonicity: t.monotonicity ?? undefined,
+    expr: t.expr ?? undefined,
+    label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
+  }));
+
+  let fitResult: FitResult | null = null;
+  if (model.coef_table) {
+    const spec = model.spec ?? {};
+    fitResult = {
+      success: true,
+      fit_duration_ms: model.fit_duration_ms ?? 0,
+      summary: model.summary ?? "",
+      coef_table: model.coef_table,
+      n_obs: model.n_obs ?? 0,
+      n_validation: model.n_validation ?? null,
+      deviance: model.deviance ?? null,
+      null_deviance: model.null_deviance ?? null,
+      aic: model.aic ?? null,
+      bic: model.bic ?? null,
+      family: spec.family ?? "",
+      link: spec.link ?? "",
+      n_terms: specTerms.length,
+      n_params: model.n_params ?? specTerms.length,
+      diagnostics: model.diagnostics ?? null,
+    };
+  }
+
+  return { terms, fitResult, version: model.version };
+}
+
+/** Serialize frontend TermSpec[] to the backend-expected shape. */
+function serializeTerms(terms: TermSpec[]) {
+  return terms.map((t) => ({
+    column: t.column,
+    type: t.type,
+    df: t.df ?? null,
+    k: t.k ?? null,
+    monotonicity: t.monotonicity ?? null,
+    expr: t.expr ?? null,
+  }));
+}
 
 export default function ModelBuilderPage() {
   const navigate = useNavigate();
@@ -48,7 +100,7 @@ export default function ModelBuilderPage() {
   const config = location.state as ModelConfig | null;
 
   const [search, setSearch] = useState("");
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const glowRef = useRef<HTMLDivElement>(null);
   const [terms, setTerms] = useState<TermSpec[]>([]);
 
   // Exploration state (run once on mount)
@@ -73,10 +125,9 @@ export default function ModelBuilderPage() {
   const fetchHistory = useCallback(() => {
     if (!config?.projectId) return;
     setHistoryLoading(true);
-    fetch(`/api/models/${config.projectId}/history`)
-      .then((r) => r.ok ? r.json() : [])
+    apiGet<ModelSummary[]>(`/models/${config.projectId}/history`)
       .then((data) => setHistory(data))
-      .catch(() => {})
+      .catch((err) => console.error("[ModelBuilder] fetch history:", err))
       .finally(() => setHistoryLoading(false));
   }, [config?.projectId]);
 
@@ -88,57 +139,20 @@ export default function ModelBuilderPage() {
     (async () => {
       setRestoring(true);
       try {
-        // Fetch history
-        const histRes = await fetch(`/api/models/${config.projectId}/history`);
-        if (!histRes.ok || cancelled) return;
-        const hist = await histRes.json();
+        const hist = await apiGet<ModelSummary[]>(`/models/${config.projectId}/history`);
+        if (cancelled) return;
         setHistory(hist);
 
         if (hist.length === 0) return;
 
-        // Fetch latest version detail
-        const latestId = hist[0].id;
-        const detailRes = await fetch(`/api/models/detail/${latestId}`);
-        if (!detailRes.ok || cancelled) return;
-        const model = await detailRes.json();
+        const model = await apiGet<any>(`/models/detail/${hist[0].id}`);
+        if (cancelled) return;
 
-        // Hydrate terms
-        const specTerms = model.spec?.terms ?? [];
-        setTerms(
-          specTerms.map((t: any) => ({
-            column: t.column,
-            type: t.type,
-            df: t.df ?? undefined,
-            k: t.k ?? undefined,
-            monotonicity: t.monotonicity ?? undefined,
-            expr: t.expr ?? undefined,
-            label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
-          }))
-        );
-        setCurrentVersion(model.version);
-
-        // Hydrate fit result if we have coef_table (i.e. a completed fit)
-        if (model.coef_table) {
-          const spec = model.spec ?? {};
-          setFitResult({
-            success: true,
-            fit_duration_ms: model.fit_duration_ms ?? 0,
-            summary: model.summary ?? "",
-            coef_table: model.coef_table,
-            n_obs: model.n_obs ?? 0,
-            n_validation: model.n_validation ?? null,
-            deviance: model.deviance ?? null,
-            null_deviance: model.null_deviance ?? null,
-            aic: model.aic ?? null,
-            bic: model.bic ?? null,
-            family: spec.family ?? "",
-            link: spec.link ?? "",
-            n_terms: specTerms.length,
-            n_params: model.n_params ?? specTerms.length,
-            diagnostics: model.diagnostics ?? null,
-          });
-        }
-      } catch { /* best effort */ }
+        const hydrated = hydrateModel(model);
+        setTerms(hydrated.terms);
+        setCurrentVersion(hydrated.version);
+        setFitResult(hydrated.fitResult);
+      } catch (err) { console.error("[ModelBuilder] restore:", err); }
       finally { if (!cancelled) setRestoring(false); }
     })();
 
@@ -151,8 +165,14 @@ export default function ModelBuilderPage() {
   const [submenuKey, setSubmenuKey] = useState<string | null>(null);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
-    window.addEventListener("mousemove", handler);
+    const handler = (e: MouseEvent) => {
+      const el = glowRef.current;
+      if (el) {
+        el.style.left = e.clientX + "px";
+        el.style.top = e.clientY + "px";
+      }
+    };
+    window.addEventListener("mousemove", handler, { passive: true });
     return () => window.removeEventListener("mousemove", handler);
   }, []);
 
@@ -160,21 +180,16 @@ export default function ModelBuilderPage() {
   useEffect(() => {
     if (!config?.datasetPath) return;
     setExplorationLoading(true);
-    fetch("/api/explore", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        dataset_path: config.datasetPath,
-        response: config.response,
-        family: config.family,
-        exposure: config.offset ?? undefined,
-        split: config.split ?? undefined,
-        project_id: config.projectId ?? undefined,
-      }),
+    apiPost<ExplorationData>("/explore", {
+      dataset_path: config.datasetPath,
+      response: config.response,
+      family: config.family,
+      offset: config.offset ?? undefined,
+      split: config.split ?? undefined,
+      project_id: config.projectId ?? undefined,
     })
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => { if (data) { setExploration(data); fetchHistory(); } })
-      .catch(() => {})
+      .then((data) => { setExploration(data); fetchHistory(); })
+      .catch((err) => console.error("[ModelBuilder] explore:", err))
       .finally(() => setExplorationLoading(false));
   }, [config]);
 
@@ -201,18 +216,14 @@ export default function ModelBuilderPage() {
     [availableFactors, search]
   );
 
-  const numericCount = availableFactors.filter((c) => c.is_numeric).length;
-  const categoricalCount = availableFactors.filter((c) => c.is_categorical).length;
-
-  type FactorBadge = {
-    diag: FactorDiagnostic;
-    /** For fitted: actual % deviance reduction (dev_contrib / current deviance) */
-    devPct?: number;
-    /** For fitted: relative importance among fitted factors (sums to 100%) */
-    relImportance?: number;
-    /** For unfitted: expected % deviance improvement from score test */
-    expectedPct?: number;
-  };
+  const { numericCount, categoricalCount } = useMemo(() => {
+    let num = 0, cat = 0;
+    for (const c of availableFactors) {
+      if (c.is_numeric) num++;
+      if (c.is_categorical) cat++;
+    }
+    return { numericCount: num, categoricalCount: cat };
+  }, [availableFactors]);
 
   const factorBadgeMap = useMemo(() => {
     const map = new Map<string, FactorBadge>();
@@ -221,30 +232,25 @@ export default function ModelBuilderPage() {
     const factors = fitResult?.diagnostics?.factors ?? exploration?.null_diagnostics?.factors;
     if (!factors) return map;
 
-    // Current model deviance for computing expected % improvement from score tests
-    const currentDev = fitResult?.deviance
-      ?? exploration?.null_diagnostics?.train_test?.train?.deviance
-      ?? null;
-
     for (const f of factors) {
       const badge: FactorBadge = { diag: f };
 
-      if (f.significance && currentDev && currentDev > 0) {
-        badge.devPct = (f.significance.dev_contrib / currentDev) * 100;
+      if (f.significance) {
+        badge.devPct = f.significance.dev_pct;
       }
 
       if (f.relative_importance != null) {
         badge.relImportance = f.relative_importance;
       }
 
-      if (f.score_test && currentDev && currentDev > 0) {
-        badge.expectedPct = (f.score_test.statistic / currentDev) * 100;
+      if (f.score_test) {
+        badge.expectedPct = f.score_test.expected_dev_pct;
       }
 
       map.set(f.name, badge);
     }
     return map;
-  }, [fitResult?.diagnostics?.factors, fitResult?.deviance, exploration?.null_diagnostics?.factors, exploration?.null_diagnostics?.train_test?.train?.deviance]);
+  }, [fitResult?.diagnostics?.factors, exploration?.null_diagnostics?.factors]);
 
   const addTerm = useCallback((spec: TermSpec) => {
     setTerms((prev) => {
@@ -266,10 +272,29 @@ export default function ModelBuilderPage() {
     setTerms((prev) => prev.filter((t) => !(t.column === col && t.type === type && t.expr === expr)));
   }, []);
 
-  const termsForColumn = useCallback(
-    (colName: string) => terms.filter((t) => t.column === colName),
-    [terms]
-  );
+  const termsMap = useMemo(() => {
+    const map = new Map<string, TermSpec[]>();
+    for (const t of terms) {
+      const arr = map.get(t.column);
+      if (arr) arr.push(t);
+      else map.set(t.column, [t]);
+    }
+    return map;
+  }, [terms]);
+
+  const sortedFactors = useMemo(() => {
+    return [...filteredFactors].sort((a, b) => {
+      const ba = factorBadgeMap.get(a.name);
+      const bb = factorBadgeMap.get(b.name);
+      const aFitted = ba?.devPct != null ? 1 : 0;
+      const bFitted = bb?.devPct != null ? 1 : 0;
+      if (aFitted !== bFitted) return bFitted - aFitted;
+      if (aFitted && bFitted) return (bb!.devPct! - ba!.devPct!);
+      const aExp = ba?.expectedPct ?? 0;
+      const bExp = bb?.expectedPct ?? 0;
+      return bExp - aExp;
+    });
+  }, [filteredFactors, factorBadgeMap]);
 
   const handleFit = useCallback(async () => {
     if (!config?.datasetPath || terms.length === 0) return;
@@ -278,41 +303,23 @@ export default function ModelBuilderPage() {
     setFitResult(null);
 
     try {
-      const res = await fetch("/api/fit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dataset_path: config.datasetPath,
-          response: config.response,
-          family: config.family,
-          link: config.link,
-          offset: config.offset,
-          weights: config.weights,
-          terms: terms.map((t) => ({
-            column: t.column,
-            type: t.type,
-            df: t.df ?? null,
-            k: t.k ?? null,
-            monotonicity: t.monotonicity ?? null,
-            expr: t.expr ?? null,
-          })),
-          split: config.split ?? undefined,
-        }),
+      const serialized = serializeTerms(terms);
+      const data = await apiPost<FitResult>("/fit", {
+        dataset_path: config.datasetPath,
+        response: config.response,
+        family: config.family,
+        link: config.link,
+        offset: config.offset,
+        weights: config.weights,
+        terms: serialized,
+        split: config.split ?? undefined,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || "Fit request failed");
-      }
-      const data: FitResult = await res.json();
       setFitResult(data);
 
       // Auto-save to DB
-      try {
-        if (!config.projectId) throw new Error("No project ID");
-        const saveRes = await fetch("/api/models/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      if (config.projectId) {
+        try {
+          const saved = await apiPost<{ version: number }>("/models/save", {
             project_id: config.projectId,
             dataset_path: config.datasetPath,
             response: config.response,
@@ -320,14 +327,7 @@ export default function ModelBuilderPage() {
             link: config.link,
             offset: config.offset,
             weights: config.weights,
-            terms: terms.map((t) => ({
-              column: t.column,
-              type: t.type,
-              df: t.df ?? null,
-              k: t.k ?? null,
-              monotonicity: t.monotonicity ?? null,
-              expr: t.expr ?? null,
-            })),
+            terms: serialized,
             split: config.split ?? undefined,
             deviance: data.deviance,
             null_deviance: data.null_deviance,
@@ -340,14 +340,11 @@ export default function ModelBuilderPage() {
             summary: data.summary,
             coef_table: data.coef_table,
             diagnostics: data.diagnostics,
-          }),
-        });
-        if (saveRes.ok) {
-          const saved = await saveRes.json();
+          });
           setCurrentVersion(saved.version);
           fetchHistory();
-        }
-      } catch { /* save is best-effort */ }
+        } catch (err) { console.error("[ModelBuilder] save:", err); }
+      }
     } catch (err: any) {
       setFitError(err.message || "Model fit failed");
     } finally {
@@ -358,47 +355,12 @@ export default function ModelBuilderPage() {
   const handleRestoreVersion = useCallback(async (modelId: string) => {
     setRestoring(true);
     try {
-      const res = await fetch(`/api/models/detail/${modelId}`);
-      if (!res.ok) return;
-      const model = await res.json();
-
-      const specTerms = model.spec?.terms ?? [];
-      setTerms(
-        specTerms.map((t: any) => ({
-          column: t.column,
-          type: t.type,
-          df: t.df ?? undefined,
-          k: t.k ?? undefined,
-          monotonicity: t.monotonicity ?? undefined,
-          expr: t.expr ?? undefined,
-          label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
-        }))
-      );
-      setCurrentVersion(model.version);
-
-      if (model.coef_table) {
-        const spec = model.spec ?? {};
-        setFitResult({
-          success: true,
-          fit_duration_ms: model.fit_duration_ms ?? 0,
-          summary: model.summary ?? "",
-          coef_table: model.coef_table,
-          n_obs: model.n_obs ?? 0,
-          n_validation: model.n_validation ?? null,
-          deviance: model.deviance ?? null,
-          null_deviance: model.null_deviance ?? null,
-          aic: model.aic ?? null,
-          bic: model.bic ?? null,
-          family: spec.family ?? "",
-          link: spec.link ?? "",
-          n_terms: specTerms.length,
-          n_params: model.n_params ?? specTerms.length,
-          diagnostics: model.diagnostics ?? null,
-        });
-      } else {
-        setFitResult(null);
-      }
-    } catch { /* best effort */ }
+      const model = await apiGet<any>(`/models/detail/${modelId}`);
+      const hydrated = hydrateModel(model);
+      setTerms(hydrated.terms);
+      setCurrentVersion(hydrated.version);
+      setFitResult(hydrated.fitResult);
+    } catch (err) { console.error("[ModelBuilder] restore version:", err); }
     finally { setRestoring(false); }
   }, []);
 
@@ -544,35 +506,10 @@ export default function ModelBuilderPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
-      {/* Noise texture */}
-      <div
-        className="pointer-events-none fixed inset-0 z-[60] opacity-[0.02]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }}
-      />
-
-      {/* Grid */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage:
-            "linear-gradient(#1e1e22 1px, transparent 1px), linear-gradient(90deg, #1e1e22 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-          maskImage: "radial-gradient(ellipse 70% 50% at 50% 50%, black 10%, transparent 100%)",
-          WebkitMaskImage: "radial-gradient(ellipse 70% 50% at 50% 50%, black 10%, transparent 100%)",
-        }}
-      />
-
-      {/* Cursor glow */}
-      <div
-        className="pointer-events-none fixed z-[1] h-[400px] w-[400px] rounded-full"
-        style={{
-          left: mousePos.x, top: mousePos.y,
-          transform: "translate(-50%, -50%)",
-          background: "radial-gradient(circle, hsl(210 100% 60% / 0.03) 0%, transparent 70%)",
-          transition: "left 0.2s ease-out, top 0.2s ease-out",
-        }}
+      <PageBackground
+        ref={glowRef}
+        noiseZ={60}
+        cursorGlow
       />
 
       {/* Header */}
@@ -678,142 +615,25 @@ export default function ModelBuilderPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 py-2">
-            {filteredFactors.length === 0 ? (
+            {sortedFactors.length === 0 ? (
               <p className="px-2 py-4 text-center text-xs text-muted-foreground/40">
                 {search ? "No matching columns" : "No factors available"}
               </p>
             ) : (
               <div className="space-y-0.5">
-                {[...filteredFactors].sort((a, b) => {
-                  const ba = factorBadgeMap.get(a.name);
-                  const bb = factorBadgeMap.get(b.name);
-                  // Fitted factors first (sorted by devPct desc)
-                  const aFitted = ba?.devPct != null ? 1 : 0;
-                  const bFitted = bb?.devPct != null ? 1 : 0;
-                  if (aFitted !== bFitted) return bFitted - aFitted;
-                  if (aFitted && bFitted) return (bb!.devPct! - ba!.devPct!);
-                  // Then unfitted by expected improvement (higher = better)
-                  const aExp = ba?.expectedPct ?? 0;
-                  const bExp = bb?.expectedPct ?? 0;
-                  return bExp - aExp;
-                }).map((col, i) => {
-                  const colTerms = termsForColumn(col.name);
-                  return (
-                    <div key={col.name} style={{ animation: `fadeUp 0.3s ease-out ${0.03 * i}s both` }}>
-                      {/* Factor row */}
-                      <div
-                        onClick={() => handleFactorClick(col)}
-                        onContextMenu={(e) => handleContextMenu(e, col)}
-                        className={cn(
-                          "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all hover:bg-white/[0.05] cursor-pointer",
-                          colTerms.length > 0 && "bg-white/[0.02]",
-                          selectedFactor === col.name && "!bg-primary/10 ring-1 ring-primary/30"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors",
-                            col.is_categorical
-                              ? "bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/20"
-                              : "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20"
-                          )}
-                        >
-                          {col.is_categorical ? <Type className="h-3.5 w-3.5" /> : <Hash className="h-3.5 w-3.5" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground/80 group-hover:text-foreground">
-                            {col.name}
-                          </p>
-                          <p className="text-[0.6rem] text-muted-foreground/40">
-                            {col.dtype} &middot; {col.n_unique} unique
-                            {col.n_missing > 0 && (
-                              <span className="text-amber-400/60"> &middot; {col.n_missing} missing</span>
-                            )}
-                          </p>
-                        </div>
-                        {(() => {
-                          const fb = factorBadgeMap.get(col.name);
-                          if (fb?.diag.score_test) {
-                            const st = fb.diag.score_test;
-                            const ep = fb.expectedPct;
-                            return (
-                              <span
-                                className={cn(
-                                  "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
-                                  st.significant && ep != null && ep >= 0.5 ? "bg-emerald-500/15 text-emerald-400"
-                                    : st.significant ? "bg-emerald-500/8 text-emerald-400/60"
-                                    : "bg-white/[0.04] text-muted-foreground/30"
-                                )}
-                                title={`Score test: χ²=${st.statistic.toFixed(1)}, df=${st.df}, p=${st.pvalue < 0.0001 ? "<0.0001" : st.pvalue.toFixed(4)}`}
-                              >
-                                {st.significant && ep != null
-                                  ? ep >= 0.1 ? `~${ep.toFixed(1)}%` : `~${ep.toFixed(2)}%`
-                                  : "ns"}
-                              </span>
-                            );
-                          }
-                          if (fb?.devPct != null) {
-                            return (
-                              <span
-                                className={cn(
-                                  "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
-                                  fb.devPct >= 1 ? "bg-blue-500/15 text-blue-400"
-                                    : fb.devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70"
-                                    : "bg-white/[0.04] text-muted-foreground/40"
-                                )}
-                                title={`Deviance reduction: ${fb.devPct.toFixed(2)}%${fb.relImportance != null ? ` · Relative importance: ${fb.relImportance.toFixed(1)}%` : ""} (Δdev=${fb.diag.significance!.dev_contrib.toFixed(1)})`}
-                              >
-                                {fb.devPct >= 0.1 ? `${fb.devPct.toFixed(1)}%` : `${fb.devPct.toFixed(2)}%`}
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="text-[0.55rem] text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/30">
-                              right-click
-                            </span>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Fitted terms for this factor */}
-                      {colTerms.length > 0 && (
-                        <div className="ml-9 space-y-0.5 pb-1 pt-0.5">
-                          {colTerms.map((term) => {
-                            const color = TERM_COLORS[term.type];
-                            return (
-                              <div
-                                key={`${term.type}-${term.expr ?? ""}-${term.df ?? ""}-${term.monotonicity ?? ""}`}
-                                className="group/term flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white/[0.04]"
-                                style={{ animation: "fadeUp 0.2s ease-out both" }}
-                              >
-                                <span className={cn("rounded px-1.5 py-0.5 text-[0.6rem] font-semibold leading-none", color.bg, color.text)}>
-                                  {color.label}
-                                </span>
-                                <span className="flex-1 truncate text-[0.7rem] text-foreground/60">
-                                  {term.type === "expression" ? term.expr : term.type.replace("_", " ")}
-                                  {term.monotonicity && (
-                                    <span className="ml-1 text-muted-foreground/40">
-                                      {term.monotonicity === "increasing" ? "↑" : "↓"}
-                                    </span>
-                                  )}
-                                  {term.df != null && (
-                                    <span className="ml-1 text-muted-foreground/40">df={term.df}</span>
-                                  )}
-                                </span>
-                                <button
-                                  onClick={() => removeTerm(term.column, term.type, term.expr)}
-                                  className="rounded p-0.5 text-muted-foreground/0 transition-colors group-hover/term:text-muted-foreground/30 hover:!text-destructive"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {sortedFactors.map((col, i) => (
+                  <FactorRow
+                    key={col.name}
+                    col={col}
+                    index={i}
+                    colTerms={termsMap.get(col.name)}
+                    badge={factorBadgeMap.get(col.name)}
+                    isSelected={selectedFactor === col.name}
+                    onFactorClick={handleFactorClick}
+                    onContextMenu={handleContextMenu}
+                    onRemoveTerm={removeTerm}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -998,6 +818,153 @@ export default function ModelBuilderPage() {
         />
       )}
     </div>
+  );
+}
+
+/* ---- Memoized Factor Row ---- */
+
+type FactorBadge = {
+  diag: FactorDiagnostic;
+  devPct?: number;
+  relImportance?: number;
+  expectedPct?: number;
+};
+
+const FactorRow = memo(function FactorRow({
+  col,
+  index,
+  colTerms,
+  badge: fb,
+  isSelected,
+  onFactorClick,
+  onContextMenu,
+  onRemoveTerm,
+}: {
+  col: ColumnMeta;
+  index: number;
+  colTerms: TermSpec[] | undefined;
+  badge: FactorBadge | undefined;
+  isSelected: boolean;
+  onFactorClick: (col: ColumnMeta) => void;
+  onContextMenu: (e: React.MouseEvent, col: ColumnMeta) => void;
+  onRemoveTerm: (col: string, type: TermType, expr?: string) => void;
+}) {
+  const hasTerms = colTerms && colTerms.length > 0;
+  return (
+    <div key={col.name} style={{ animation: `fadeUp 0.3s ease-out ${Math.min(0.03 * index, 0.6)}s both` }}>
+      {/* Factor row */}
+      <div
+        onClick={() => onFactorClick(col)}
+        onContextMenu={(e) => onContextMenu(e, col)}
+        className={cn(
+          "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all hover:bg-white/[0.05] cursor-pointer",
+          hasTerms && "bg-white/[0.02]",
+          isSelected && "!bg-primary/10 ring-1 ring-primary/30"
+        )}
+      >
+        <div
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors",
+            col.is_categorical
+              ? "bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/20"
+              : "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20"
+          )}
+        >
+          {col.is_categorical ? <Type className="h-3.5 w-3.5" /> : <Hash className="h-3.5 w-3.5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground/80 group-hover:text-foreground">
+            {col.name}
+          </p>
+          <p className="text-[0.6rem] text-muted-foreground/40">
+            {col.dtype} &middot; {col.n_unique} unique
+            {col.n_missing > 0 && (
+              <span className="text-amber-400/60"> &middot; {col.n_missing} missing</span>
+            )}
+          </p>
+        </div>
+        <FactorBadgeDisplay fb={fb} />
+      </div>
+
+      {/* Fitted terms for this factor */}
+      {hasTerms && (
+        <div className="ml-9 space-y-0.5 pb-1 pt-0.5">
+          {colTerms.map((term) => {
+            const color = TERM_COLORS[term.type];
+            return (
+              <div
+                key={`${term.type}-${term.expr ?? ""}-${term.df ?? ""}-${term.monotonicity ?? ""}`}
+                className="group/term flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-white/[0.04]"
+                style={{ animation: "fadeUp 0.2s ease-out both" }}
+              >
+                <span className={cn("rounded px-1.5 py-0.5 text-[0.6rem] font-semibold leading-none", color.bg, color.text)}>
+                  {color.label}
+                </span>
+                <span className="flex-1 truncate text-[0.7rem] text-foreground/60">
+                  {term.type === "expression" ? term.expr : term.type.replace("_", " ")}
+                  {term.monotonicity && (
+                    <span className="ml-1 text-muted-foreground/40">
+                      {term.monotonicity === "increasing" ? "↑" : "↓"}
+                    </span>
+                  )}
+                  {term.df != null && (
+                    <span className="ml-1 text-muted-foreground/40">df={term.df}</span>
+                  )}
+                </span>
+                <button
+                  onClick={() => onRemoveTerm(term.column, term.type, term.expr)}
+                  className="rounded p-0.5 text-muted-foreground/0 transition-colors group-hover/term:text-muted-foreground/30 hover:!text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+});
+
+function FactorBadgeDisplay({ fb }: { fb: FactorBadge | undefined }) {
+  if (fb?.diag.score_test) {
+    const st = fb.diag.score_test;
+    const ep = fb.expectedPct;
+    return (
+      <span
+        className={cn(
+          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
+          st.significant && ep != null && ep >= 0.5 ? "bg-emerald-500/15 text-emerald-400"
+            : st.significant ? "bg-emerald-500/8 text-emerald-400/60"
+            : "bg-white/[0.04] text-muted-foreground/30"
+        )}
+        title={`Score test: χ²=${st.statistic.toFixed(1)}, df=${st.df}, p=${st.pvalue < 0.0001 ? "<0.0001" : st.pvalue.toFixed(4)}`}
+      >
+        {st.significant && ep != null
+          ? ep >= 0.1 ? `~${ep.toFixed(1)}%` : `~${ep.toFixed(2)}%`
+          : "ns"}
+      </span>
+    );
+  }
+  if (fb?.devPct != null) {
+    return (
+      <span
+        className={cn(
+          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
+          fb.devPct >= 1 ? "bg-blue-500/15 text-blue-400"
+            : fb.devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70"
+            : "bg-white/[0.04] text-muted-foreground/40"
+        )}
+        title={`Deviance reduction: ${fb.devPct.toFixed(2)}%${fb.relImportance != null ? ` · Relative importance: ${fb.relImportance.toFixed(1)}%` : ""} (Δdev=${fb.diag.significance!.dev_contrib.toFixed(1)})`}
+      >
+        {fb.devPct >= 0.1 ? `${fb.devPct.toFixed(1)}%` : `${fb.devPct.toFixed(2)}%`}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[0.55rem] text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/30">
+      right-click
+    </span>
   );
 }
 

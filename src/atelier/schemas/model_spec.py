@@ -33,7 +33,7 @@ class ExploreRequest(BaseModel):
     response: str
     family: str = "poisson"
     link: str | None = None
-    exposure: str | None = None
+    offset: str | None = None
     weights: str | None = None
     split: SplitSpec | None = None
     project_id: str | None = None

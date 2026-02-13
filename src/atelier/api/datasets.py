@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, UploadFile
 
 from atelier.config import PROJECTS_DIR, SUPPORTED_FORMATS
 from atelier.schemas import ColumnValuesRequest
-from atelier.services.dataset_service import column_meta, load_dataframe
+from atelier.services.dataset_service import column_meta, load_dataframe, load_column
 
 router = APIRouter(tags=["datasets"])
 
@@ -54,17 +54,6 @@ async def upload_dataset(file: UploadFile):
 @router.post("/datasets/column-values")
 async def get_column_values(req: ColumnValuesRequest):
     """Return unique values for a column (up to 200)."""
-    path = Path(req.dataset_path)
-    try:
-        if path.suffix == ".parquet":
-            df = pl.read_parquet(path, columns=[req.column])
-        else:
-            df = pl.read_csv(path, columns=[req.column])
-    except Exception as e:
-        raise HTTPException(400, f"Failed to read column: {e}")
-
-    if req.column not in df.columns:
-        raise HTTPException(400, f"Column '{req.column}' not found")
-
-    values = df[req.column].drop_nulls().unique().sort().to_list()[:200]
+    series = load_column(Path(req.dataset_path), req.column)
+    values = series.drop_nulls().unique().sort().to_list()[:200]
     return {"column": req.column, "values": [str(v) for v in values]}

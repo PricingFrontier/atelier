@@ -59,6 +59,7 @@ export interface ScoreTest {
   df: number;
   pvalue: number;
   significant: boolean;
+  expected_dev_pct: number;
 }
 
 /* ── Significance (fitted factors) ───────────────────── */
@@ -66,6 +67,7 @@ export interface FactorSignificance {
   chi2: number;
   p: number;
   dev_contrib: number;
+  dev_pct: number;
 }
 
 /* ── Residual pattern ────────────────────────────────── */

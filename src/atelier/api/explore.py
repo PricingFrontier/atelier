@@ -8,12 +8,10 @@ from typing import Any
 
 import rustystats as rs
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import func, select
 
-from atelier.db.engine import get_session_factory
-from atelier.db.models import Model, Project
 from atelier.schemas import ExploreRequest
 from atelier.services.dataset_service import apply_split, classify_columns, load_dataframe
+from atelier.services.model_service import save_null_model
 
 log = logging.getLogger(__name__)
 
@@ -28,10 +26,10 @@ async def explore_data(req: ExploreRequest):
     # Apply data split — explore train data only, but keep validation for null model
     df, validation_df = apply_split(df, req.split)
 
-    # Classify columns (exclude response, exposure, and split column)
+    # Classify columns (exclude response, offset, and split column)
     reserved = {req.response}
-    if req.exposure:
-        reserved.add(req.exposure)
+    if req.offset:
+        reserved.add(req.offset)
     if req.split:
         reserved.add(req.split.column)
 
@@ -48,8 +46,8 @@ async def explore_data(req: ExploreRequest):
             kwargs["categorical_factors"] = cat_factors
         if cont_factors:
             kwargs["continuous_factors"] = cont_factors
-        if req.exposure:
-            kwargs["exposure"] = req.exposure
+        if req.offset:
+            kwargs["exposure"] = req.offset
 
         exploration = rs.explore_data(**kwargs)
         result_json = _json.loads(exploration.to_json())
@@ -69,8 +67,8 @@ async def explore_data(req: ExploreRequest):
             "data": df,
             "family": req.family,
         }
-        if req.exposure:
-            null_kwargs["offset"] = req.exposure
+        if req.offset:
+            null_kwargs["offset"] = req.offset
 
         null_result = rs.glm_dict(**null_kwargs).fit()
 
@@ -95,64 +93,14 @@ async def explore_data(req: ExploreRequest):
 
     # Save null model as version 1 in history (if project_id provided and no versions yet)
     if req.project_id and null_diagnostics is not None:
-        try:
-            session_factory = get_session_factory()
-            async with session_factory() as session:
-                project = await session.get(Project, req.project_id)
-                if project:
-                    # Check if there are already versions
-                    existing = await session.execute(
-                        select(func.coalesce(func.max(Model.version), 0)).where(
-                            Model.project_id == req.project_id
-                        )
-                    )
-                    max_version = existing.scalar_one()
-                    if max_version == 0:
-                        # Extract null model metrics
-                        null_dev = None
-                        null_aic = None
-                        null_n_obs = df.height
-                        try:
-                            null_dev = float(null_result.deviance)
-                        except Exception:
-                            pass
-                        try:
-                            null_aic = float(null_result.aic())
-                        except Exception:
-                            pass
-
-                        null_model_row = Model(
-                            project_id=req.project_id,
-                            dataset_id=req.project_id,
-                            version=1,
-                            name="v1",
-                            spec={
-                                "dataset_path": req.dataset_path,
-                                "response": req.response,
-                                "family": req.family,
-                                "link": req.link,
-                                "offset": req.exposure,
-                                "weights": req.weights,
-                                "terms": [],
-                                "split": req.split.model_dump() if req.split else None,
-                            },
-                            status="fitted",
-                            deviance=null_dev,
-                            null_deviance=null_dev,
-                            aic=null_aic,
-                            n_obs=null_n_obs,
-                            n_validation=validation_df.height if validation_df is not None else None,
-                            n_params=1,
-                            fit_duration_ms=null_ms,
-                            summary_text="Null model (intercept only)",
-                            coef_table_json=None,
-                            diagnostics_json=_json.dumps(null_diagnostics),
-                        )
-                        session.add(null_model_row)
-                        project.n_versions = 1
-                        await session.commit()
-                        log.info("[explore] saved null model as v1 for project '%s'", project.name)
-        except Exception as exc:
-            log.warning("[explore] failed to save null model (non-fatal): %s", exc)
+        await save_null_model(
+            project_id=req.project_id,
+            null_result=null_result,
+            null_diagnostics=null_diagnostics,
+            req=req,
+            n_obs=df.height,
+            n_validation=validation_df.height if validation_df is not None else None,
+            fit_ms=null_ms,
+        )
 
     return result_json

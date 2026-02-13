@@ -39,32 +39,12 @@ class Project(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
 
-class Dataset(Base):
-    __tablename__ = "datasets"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("projects.id"), nullable=False
-    )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_path: Mapped[str] = mapped_column(String, nullable=False)
-    file_format: Mapped[str] = mapped_column(String(10), nullable=False)
-    n_rows: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    n_cols: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    columns: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
-    exploration_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-
 class Model(Base):
     __tablename__ = "models"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("projects.id"), nullable=False
-    )
-    dataset_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("datasets.id"), nullable=False
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(255), default="")
