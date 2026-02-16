@@ -544,7 +544,7 @@ export default function ModelBuilderPage() {
       >
         <button
           onClick={() => navigate("/new", { state: config })}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Setup
@@ -585,7 +585,7 @@ export default function ModelBuilderPage() {
               disabled={terms.length === 0 || fitting}
               onClick={handleFit}
               className={cn(
-                "relative flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
+                "relative flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors",
                 terms.length > 0
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98]"
                   : "bg-secondary text-muted-foreground/50"
@@ -724,7 +724,7 @@ export default function ModelBuilderPage() {
                       className="absolute inset-[-16px] rounded-full border border-primary/5"
                       style={{ animation: "pulseRing 2.4s ease-out 1.2s infinite" }}
                     />
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/[0.08] backdrop-blur-sm">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/[0.08]">
                       <div
                         className="text-primary"
                         style={{ animation: "gentlePulse 2s ease-in-out infinite" }}
@@ -884,13 +884,13 @@ const FactorRow = memo(function FactorRow({
 }) {
   const hasTerms = colTerms && colTerms.length > 0;
   return (
-    <div key={col.name} style={{ animation: `fadeUp 0.3s ease-out ${Math.min(0.03 * index, 0.6)}s both` }}>
+    <div key={col.name} style={index < 15 ? { animation: `fadeUp 0.3s ease-out ${0.03 * index}s both` } : undefined}>
       {/* Factor row */}
       <div
         onClick={() => onFactorClick(col)}
         onContextMenu={(e) => onContextMenu(e, col)}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-all hover:bg-surface-hover cursor-pointer",
+          "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-surface-hover cursor-pointer",
           hasTerms && "bg-surface",
           isSelected && "!bg-primary/10 ring-1 ring-primary/30"
         )}
@@ -966,7 +966,7 @@ function FactorBadgeDisplay({ fb }: { fb: FactorBadge | undefined }) {
     return (
       <span
         className={cn(
-          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
+          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.6rem] font-semibold tabular-nums",
           st.significant && ep != null && ep >= 0.5 ? "bg-emerald-500/15 text-emerald-400"
             : st.significant ? "bg-emerald-500/8 text-emerald-400/60"
             : "bg-secondary text-muted-foreground/50"
@@ -983,7 +983,7 @@ function FactorBadgeDisplay({ fb }: { fb: FactorBadge | undefined }) {
     return (
       <span
         className={cn(
-          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.55rem] font-semibold tabular-nums",
+          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.6rem] font-semibold tabular-nums",
           fb.devPct >= 1 ? "bg-blue-500/15 text-blue-400"
             : fb.devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70"
             : "bg-secondary text-muted-foreground/50"
@@ -995,7 +995,7 @@ function FactorBadgeDisplay({ fb }: { fb: FactorBadge | undefined }) {
     );
   }
   return (
-    <span className="text-[0.55rem] text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/30">
+    <span className="text-[0.6rem] text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/30">
       right-click
     </span>
   );
@@ -1100,7 +1100,7 @@ function CodePanel({ config, terms }: { config: ModelConfig; terms: TermSpec[] }
         <button
           onClick={handleCopy}
           className={cn(
-            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
             copied
               ? "bg-emerald-500/10 text-emerald-400"
               : "bg-accent text-muted-foreground hover:bg-surface-active hover:text-foreground"
@@ -1162,10 +1162,10 @@ function HistoryPanel({
               <div
                 key={m.id}
                 className={cn(
-                  "rounded-xl border p-4 transition-all",
+                  "rounded-xl border p-4 transition-colors",
                   isCurrent
                     ? "border-primary/30 bg-primary/[0.04]"
-                    : "border-border bg-card hover:border-border hover:bg-surface-hover"
+                    : "border-border bg-card hover:bg-surface-hover"
                 )}
                 style={{ animation: `fadeUp 0.3s ease-out ${0.03 * i}s both` }}
               >
@@ -1203,7 +1203,7 @@ function HistoryPanel({
                     <button
                       disabled={isRestoring}
                       onClick={() => onRestore(m.id)}
-                      className="rounded-lg border border-border px-2.5 py-1 text-[0.65rem] font-medium text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary disabled:opacity-40"
+                      className="rounded-lg border border-border px-2.5 py-1 text-[0.65rem] font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary disabled:opacity-40"
                     >
                       {isRestoring ? "Restoring…" : "Restore"}
                     </button>
@@ -1271,7 +1271,7 @@ function MetricCell({
   }
   return (
     <div>
-      <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">{label}</p>
+      <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/30">{label}</p>
       <p className={cn("font-mono text-xs", color)}>{format(value)}</p>
     </div>
   );
@@ -1292,7 +1292,7 @@ function MetricsRow({
 
   return (
     <div className="mt-2.5 flex items-center gap-4">
-      <span className="w-9 text-[0.55rem] font-semibold uppercase tracking-wider text-muted-foreground/40">
+      <span className="w-9 text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground/40">
         {label}
       </span>
       <MetricCell label="Mean Dev" value={metrics.mean_deviance} prevValue={prev?.mean_deviance ?? null} lowerIsBetter format={fmt6} />
@@ -1300,7 +1300,7 @@ function MetricsRow({
       <MetricCell label="Gini" value={metrics.gini} prevValue={prev?.gini ?? null} lowerIsBetter={false} format={fmt4} />
       {metrics.n_obs != null && (
         <div>
-          <p className="text-[0.55rem] uppercase tracking-wider text-muted-foreground/30">Obs</p>
+          <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/30">Obs</p>
           <p className="font-mono text-xs text-foreground/70">{metrics.n_obs.toLocaleString()}</p>
         </div>
       )}
@@ -1313,7 +1313,7 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+        "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
         active
           ? "bg-accent text-foreground shadow-sm"
           : "text-muted-foreground/60 hover:bg-surface-hover hover:text-muted-foreground"

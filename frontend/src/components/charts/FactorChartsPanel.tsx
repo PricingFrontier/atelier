@@ -67,7 +67,7 @@ export default memo(function FactorChartsPanel({
             <button
               onClick={() => setDiagSet("train")}
               className={cn(
-                "rounded-md px-3 py-1 text-[0.65rem] font-medium transition-all",
+                "rounded-md px-3 py-1 text-[0.65rem] font-medium transition-colors",
                 diagSet === "train"
                   ? "bg-blue-500/20 text-blue-400 shadow-sm"
                   : "text-muted-foreground/40 hover:text-muted-foreground/60"
@@ -78,7 +78,7 @@ export default memo(function FactorChartsPanel({
             <button
               onClick={() => setDiagSet("validation")}
               className={cn(
-                "rounded-md px-3 py-1 text-[0.65rem] font-medium transition-all",
+                "rounded-md px-3 py-1 text-[0.65rem] font-medium transition-colors",
                 diagSet === "validation"
                   ? "bg-amber-500/20 text-amber-400 shadow-sm"
                   : "text-muted-foreground/40 hover:text-muted-foreground/60"

@@ -99,7 +99,7 @@ export default function LandingPage() {
         <div className="mt-14 flex justify-center gap-3.5 animate-[fadeUp_0.8s_ease-out_0.4s_both]">
           <button
             onClick={() => navigate("/new")}
-            className="group relative flex items-center gap-2.5 overflow-hidden rounded-[0.625rem] border border-border bg-card px-6 py-3 text-sm font-medium text-muted-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-border hover:text-foreground hover:bg-surface-active"
+            className="group relative flex items-center gap-2.5 overflow-hidden rounded-[0.625rem] border border-border bg-card px-6 py-3 text-sm font-medium text-muted-foreground transition duration-200 hover:-translate-y-0.5 hover:text-foreground hover:bg-surface-active"
           >
             <Plus className="h-[18px] w-[18px] opacity-50 transition-opacity group-hover:opacity-80" />
             New Model
@@ -120,7 +120,7 @@ export default function LandingPage() {
                 <div
                   key={p.id}
                   onClick={() => handleLoadProject(p)}
-                  className="group flex w-[400px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-all hover:border-border hover:bg-surface-hover"
+                  className="group flex w-[400px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-surface-hover"
                   style={{ animation: `fadeUp 0.4s ease-out ${0.7 + i * 0.08}s both` }}
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -145,12 +145,12 @@ export default function LandingPage() {
                       e.stopPropagation();
                       handleDeleteProject(p.id);
                     }}
-                    className="rounded-lg p-1.5 text-muted-foreground/40 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                    className="rounded-lg p-1.5 text-muted-foreground/40 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
                     title="Delete project"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
                 </div>
               ))}
             </div>

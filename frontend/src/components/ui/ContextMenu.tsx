@@ -71,7 +71,7 @@ export default function ContextMenu({
             {/* Submenu */}
             {hasSubmenu && isOpen && (
               <div
-                className="absolute top-0 min-w-[200px] rounded-lg border border-border bg-popover p-1 shadow-2xl shadow-black/60"
+                className="absolute left-full top-0 ml-1 min-w-[200px] rounded-lg border border-border bg-popover p-1 shadow-2xl shadow-black/60"
                 style={{ animation: "fadeUp 0.1s ease-out both" }}
                 onClick={(e) => e.stopPropagation()}
               >

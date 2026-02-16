@@ -267,7 +267,7 @@ export default function ModelConfigPage() {
       >
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back
@@ -303,7 +303,7 @@ export default function ModelConfigPage() {
                   )}
                   <div
                     className={cn(
-                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-500",
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors duration-500",
                       s.done
                         ? "bg-primary/10 text-primary"
                         : "bg-surface text-muted-foreground"
@@ -311,7 +311,7 @@ export default function ModelConfigPage() {
                   >
                     <div
                       className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded-full text-[0.55rem] font-semibold transition-all duration-500",
+                        "flex h-5 w-5 items-center justify-center rounded-full text-[0.6rem] font-semibold transition-colors duration-500",
                         s.done
                           ? "bg-primary/20 text-primary"
                           : "bg-accent text-muted-foreground"
@@ -349,14 +349,14 @@ export default function ModelConfigPage() {
             >
               <div
                 className={cn(
-                  "relative flex flex-col items-center justify-center rounded-xl border border-border bg-surface p-16 transition-all",
+                  "relative flex flex-col items-center justify-center rounded-xl border border-border bg-surface p-16 transition-colors",
                   dragOver && "border-primary/30 bg-surface-hover",
-                  !dragOver && !uploading && "group-hover:border-border group-hover:bg-surface-hover"
+                  !dragOver && !uploading && "group-hover:bg-surface-hover"
                 )}
               >
                 <div
                   className={cn(
-                    "mb-4 flex h-14 w-14 items-center justify-center rounded-xl transition-all duration-300",
+                    "mb-4 flex h-14 w-14 items-center justify-center rounded-xl transition-colors duration-300",
                     uploading
                       ? "bg-primary/10 text-primary"
                       : "bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary/70"
@@ -396,7 +396,7 @@ export default function ModelConfigPage() {
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   placeholder="e.g. Freq GLM – Motor 2025"
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all focus:border-primary/30 focus:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 transition-colors focus:border-primary/30 focus:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-primary/20"
                 />
               </GlassCard>
             </AnimatedSection>
@@ -554,7 +554,7 @@ export default function ModelConfigPage() {
                                     }))
                                   }
                                   className={cn(
-                                    "rounded-md px-2.5 py-1 text-[0.65rem] font-medium transition-all",
+                                    "rounded-md px-2.5 py-1 text-[0.65rem] font-medium transition-colors",
                                     splitMapping[val] === group
                                       ? group === "train"
                                         ? "bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30"
@@ -639,7 +639,7 @@ export default function ModelConfigPage() {
                   disabled={!isValid}
                   onClick={handleContinue}
                   className={cn(
-                    "relative flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-medium transition-all duration-300",
+                    "relative flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-medium transition duration-300",
                     isValid
                       ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:-translate-y-0.5 hover:brightness-110"
                       : "cursor-not-allowed bg-secondary text-muted-foreground/50"
@@ -669,7 +669,7 @@ export default function ModelConfigPage() {
 
 function GlassCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-border hover:bg-surface-hover">
+    <div className="rounded-xl border border-border bg-card p-5 transition-colors hover:bg-surface-hover">
       {children}
     </div>
   );
@@ -741,10 +741,10 @@ function SelectDropdown({
         ref={btnRef}
         onClick={handleToggle}
         className={cn(
-          "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-all",
+          "flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm transition-colors",
           open
             ? "border-primary/30 bg-surface-hover ring-1 ring-primary/20"
-            : "border-border bg-surface hover:border-border hover:bg-surface-hover"
+            : "border-border bg-surface hover:bg-surface-hover"
         )}
       >
         <span className={selected ? "text-foreground" : "text-muted-foreground/60"}>
@@ -783,7 +783,7 @@ function SelectDropdown({
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all",
+                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                   opt.value === value
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
