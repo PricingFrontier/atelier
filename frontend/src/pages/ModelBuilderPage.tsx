@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -39,9 +39,17 @@ import type {
   FactorDiagnostic,
 } from "@/types";
 import { TERM_COLORS } from "@/types";
-import { FactorChartsPanel } from "@/components/charts";
-import ModelPanel from "@/components/ModelPanel";
-import DataPanel from "@/components/DataPanel";
+const FactorChartsPanel = lazy(() => import("@/components/charts/FactorChartsPanel"));
+const ModelPanel = lazy(() => import("@/components/ModelPanel"));
+const DataPanel = lazy(() => import("@/components/DataPanel"));
+
+function TabFallback() {
+  return (
+    <div className="flex flex-1 items-center justify-center p-6">
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  );
+}
 import ContextMenu from "@/components/ui/ContextMenu";
 import PageBackground from "@/components/ui/PageBackground";
 
@@ -102,7 +110,9 @@ export default function ModelBuilderPage() {
   const location = useLocation();
   const config = location.state as ModelConfig | null;
 
-  log.info(TAG, `render  hasConfig=${!!config}  project=${config?.projectName ?? "none"}  response=${config?.response ?? "?"}  family=${config?.family ?? "?"}`);
+  // Stabilize config ref so effects don't re-trigger on every render
+  const configRef = useRef(config);
+  configRef.current = config;
 
   const [search, setSearch] = useState("");
   const [terms, setTerms] = useState<TermSpec[]>([]);
@@ -180,18 +190,19 @@ export default function ModelBuilderPage() {
   const [menuCol, setMenuCol] = useState<ColumnMeta | null>(null);
   const [submenuKey, setSubmenuKey] = useState<string | null>(null);
 
-  // Fetch exploration data on mount
+  // Fetch exploration data on mount (keyed on stable fields, not config object ref)
   useEffect(() => {
-    if (!config?.datasetPath) return;
-    log.info(TAG, `mount — running exploration  dataset=${config.datasetPath}  response=${config.response}  family=${config.family}`);
+    const cfg = configRef.current;
+    if (!cfg?.datasetPath) return;
+    log.info(TAG, `mount — running exploration  dataset=${cfg.datasetPath}  response=${cfg.response}  family=${cfg.family}`);
     setExplorationLoading(true);
     apiPost<ExplorationData>("/explore", {
-      dataset_path: config.datasetPath,
-      response: config.response,
-      family: config.family,
-      offset: config.offset ?? undefined,
-      split: config.split ?? undefined,
-      project_id: config.projectId ?? undefined,
+      dataset_path: cfg.datasetPath,
+      response: cfg.response,
+      family: cfg.family,
+      offset: cfg.offset ?? undefined,
+      split: cfg.split ?? undefined,
+      project_id: cfg.projectId ?? undefined,
     })
       .then((data) => {
         log.info(TAG, `exploration complete — keys=${Object.keys(data).join(",")}`);
@@ -203,7 +214,8 @@ export default function ModelBuilderPage() {
         setExplorationError(err.message || "Data exploration failed");
       })
       .finally(() => setExplorationLoading(false));
-  }, [config]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config?.datasetPath, config?.response, config?.family]);
 
   // Close menu on click outside or Escape
   useEffect(() => {
@@ -771,7 +783,9 @@ export default function ModelBuilderPage() {
             ) : activeTab === "code" && config ? (
               <CodePanel config={config} terms={terms} />
             ) : activeTab === "data" && exploration ? (
-              <DataPanel exploration={exploration} />
+              <Suspense fallback={<TabFallback />}>
+                <DataPanel exploration={exploration} />
+              </Suspense>
             ) : activeTab === "history" ? (
               <HistoryPanel
                 history={history}
@@ -781,7 +795,9 @@ export default function ModelBuilderPage() {
                 restoring={restoring}
               />
             ) : activeTab === "model" && (fitResult || exploration?.null_diagnostics) ? (
-              <ModelPanel result={fitResult} nullDiagnostics={exploration?.null_diagnostics} />
+              <Suspense fallback={<TabFallback />}>
+                <ModelPanel result={fitResult} nullDiagnostics={exploration?.null_diagnostics} />
+              </Suspense>
             ) : explorationError ? (
               <div className="flex flex-1 items-center justify-center p-6">
                 <div className="max-w-md text-center" style={{ animation: "fadeUp 0.4s ease-out both" }}>
@@ -804,16 +820,18 @@ export default function ModelBuilderPage() {
                 </div>
               </div>
             ) : selectedFactor ? (
-              <FactorChartsPanel
-                selectedFactor={selectedFactor}
-                exploration={exploration}
-                diagnostics={fitResult?.diagnostics ?? null}
-                colMeta={availableFactors.find((f) => f.name === selectedFactor) ?? null}
-                explorationLoading={explorationLoading}
-                factorDiag={factorBadgeMap.get(selectedFactor)?.diag ?? null}
-                expectedPct={factorBadgeMap.get(selectedFactor)?.expectedPct}
-                devPct={factorBadgeMap.get(selectedFactor)?.devPct}
-              />
+              <Suspense fallback={<TabFallback />}>
+                <FactorChartsPanel
+                  selectedFactor={selectedFactor}
+                  exploration={exploration}
+                  diagnostics={fitResult?.diagnostics ?? null}
+                  colMeta={availableFactors.find((f) => f.name === selectedFactor) ?? null}
+                  explorationLoading={explorationLoading}
+                  factorDiag={factorBadgeMap.get(selectedFactor)?.diag ?? null}
+                  expectedPct={factorBadgeMap.get(selectedFactor)?.expectedPct}
+                  devPct={factorBadgeMap.get(selectedFactor)?.devPct}
+                />
+              </Suspense>
             ) : (
               <div className="flex flex-1 items-center justify-center p-6">
                 <div className="text-center" style={{ animation: "fadeUp 0.6s ease-out 0.2s both" }}>

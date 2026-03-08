@@ -23,5 +23,17 @@ export default defineConfig({
   build: {
     outDir: "../src/atelier/static",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes("node_modules/recharts") || id.includes("node_modules/recharts-scale")) {
+            return "recharts";
+          }
+          if (id.includes("node_modules/d3-")) {
+            return "d3";
+          }
+        },
+      },
+    },
   },
 });

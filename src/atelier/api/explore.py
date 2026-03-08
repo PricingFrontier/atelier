@@ -9,6 +9,7 @@ from typing import Any
 import rustystats as rs
 from fastapi import APIRouter, HTTPException
 
+from atelier.api._json_utils import sanitize_floats
 from atelier.schemas import ExploreRequest
 from atelier.services.dataset_service import apply_split, classify_columns, load_dataframe
 from atelier.services.model_service import save_null_model
@@ -130,4 +131,4 @@ async def explore_data(req: ExploreRequest):
         )
 
     log.info("[explore] returning result with %d top-level keys", len(result_json))
-    return result_json
+    return sanitize_floats(result_json)

@@ -10,6 +10,7 @@ import rustystats as rs
 from fastapi import APIRouter, HTTPException
 
 from atelier.schemas import FitRequest, TermSpec
+from atelier.api._json_utils import sanitize_floats
 from atelier.services.dataset_service import apply_split, classify_columns, load_dataframe
 
 log = logging.getLogger(__name__)
@@ -219,7 +220,7 @@ async def fit_model(req: FitRequest):
         "[fit] returning result: n_obs=%d  n_params=%d  n_terms=%d  fit_ms=%d",
         train_df.height, len(feature_names), len(terms_dict), fit_ms,
     )
-    return {
+    return sanitize_floats({
         "success": True,
         "fit_duration_ms": fit_ms,
         "summary": summary,
@@ -235,4 +236,4 @@ async def fit_model(req: FitRequest):
         "n_terms": len(terms_dict),
         "n_params": len(feature_names),
         "diagnostics": diagnostics_json,
-    }
+    })
