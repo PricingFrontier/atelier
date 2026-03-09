@@ -206,11 +206,11 @@ describe("ModelBuilderPage", () => {
 
     // Wait for exploration to complete — tabs only appear after exploration state is set
     await waitFor(() => {
-      expect(screen.getByText("Charts")).toBeInTheDocument();
+      expect(screen.getByText("Factors")).toBeInTheDocument();
     });
 
-    // Verify key tabs are present (use exact text to avoid multi-match)
-    expect(screen.getByText("Code")).toBeInTheDocument();
+    // Verify key tabs are present
+    expect(screen.getByText("Coefficients")).toBeInTheDocument();
     // "Data" tab is shown when exploration exists
     expect(screen.getByText("Data")).toBeInTheDocument();
   });
@@ -228,11 +228,11 @@ describe("ModelBuilderPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Region")).toBeInTheDocument();
+      expect(screen.getAllByText("Region").length).toBeGreaterThanOrEqual(1);
     });
 
-    // Right-click on the "Region" factor row
-    const regionEl = screen.getByText("Region");
+    // Right-click on the "Region" factor row in the sidebar (first match)
+    const regionEl = screen.getAllByText("Region")[0];
     fireEvent.contextMenu(regionEl);
 
     // Context menu should show categorical encoding options
@@ -284,15 +284,15 @@ describe("ModelBuilderPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Region")).toBeInTheDocument();
+      expect(screen.getAllByText("Region").length).toBeGreaterThanOrEqual(1);
     });
 
     // Fit button should be disabled initially (no terms)
     const fitButton = screen.getByText(/fit model/i).closest("button")!;
     expect(fitButton).toBeDisabled();
 
-    // Right-click on "Region" and click "Category"
-    fireEvent.contextMenu(screen.getByText("Region"));
+    // Right-click on "Region" in the sidebar (first match) and click "Category"
+    fireEvent.contextMenu(screen.getAllByText("Region")[0]);
     await waitFor(() => {
       expect(screen.getByText("Category")).toBeInTheDocument();
     });
@@ -354,11 +354,11 @@ describe("ModelBuilderPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Region")).toBeInTheDocument();
+      expect(screen.getAllByText("Region").length).toBeGreaterThanOrEqual(1);
     });
 
     // Add a term
-    fireEvent.contextMenu(screen.getByText("Region"));
+    fireEvent.contextMenu(screen.getAllByText("Region")[0]);
     await waitFor(() => {
       expect(screen.getByText("Category")).toBeInTheDocument();
     });
@@ -366,7 +366,7 @@ describe("ModelBuilderPage", () => {
 
     // The term should now show a "Cat" badge under the factor
     await waitFor(() => {
-      expect(screen.getByText("Cat")).toBeInTheDocument();
+      expect(screen.getAllByText("Cat").length).toBeGreaterThanOrEqual(1);
     });
 
     // Fit button should be enabled
@@ -375,7 +375,7 @@ describe("ModelBuilderPage", () => {
     expect(fitButton).not.toBeDisabled();
 
     // Find the X button for removing the term (it's inside the term row)
-    const catBadge = screen.getByText("Cat");
+    const catBadge = screen.getAllByText("Cat")[0];
     const termRow = catBadge.closest("div[class*='group/term']")
       ?? catBadge.parentElement?.parentElement;
     const removeButton = termRow?.querySelector("button");
@@ -403,11 +403,11 @@ describe("ModelBuilderPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Region")).toBeInTheDocument();
+      expect(screen.getAllByText("Region").length).toBeGreaterThanOrEqual(1);
     });
 
     // Add a term so we can fit
-    fireEvent.contextMenu(screen.getByText("Region"));
+    fireEvent.contextMenu(screen.getAllByText("Region")[0]);
     await waitFor(() => {
       expect(screen.getByText("Category")).toBeInTheDocument();
     });
@@ -425,7 +425,7 @@ describe("ModelBuilderPage", () => {
 
     // Should eventually show the Model tab after successful fit
     await waitFor(() => {
-      expect(screen.getByText("Model")).toBeInTheDocument();
+      expect(screen.getByText("Coefficients")).toBeInTheDocument();
     });
   });
 
@@ -445,11 +445,11 @@ describe("ModelBuilderPage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Region")).toBeInTheDocument();
+      expect(screen.getAllByText("Region").length).toBeGreaterThanOrEqual(1);
     });
 
     // Add a term so we can fit
-    fireEvent.contextMenu(screen.getByText("Region"));
+    fireEvent.contextMenu(screen.getAllByText("Region")[0]);
     await waitFor(() => {
       expect(screen.getByText("Category")).toBeInTheDocument();
     });

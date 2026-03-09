@@ -5,7 +5,16 @@
 
 import { memo } from "react";
 import { cn } from "@/lib/utils";
-import type { ExplorationData } from "@/types";
+import type {
+  ExplorationData,
+  ResponseStats,
+  ZeroInflation,
+  ExploreOverdispersion,
+  CorrelationData,
+  CorrelationPair,
+  ExploreFactorStat,
+  VifEntry,
+} from "@/types";
 
 export default memo(function DataPanel({ exploration }: { exploration: ExplorationData }) {
   const { data_summary, factor_stats, zero_inflation, overdispersion, response_stats, vif, correlations, cramers_v } = exploration;
@@ -59,12 +68,25 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 /* ── Response stats ───────────────────────────────────── */
 
-function ResponseStatsSection({ stats }: { stats: any }) {
+const PERCENTILE_KEYS = new Set(["p1", "p5", "p10", "p25", "p50", "p75", "p90", "p95", "p99"]);
+const PERCENTILE_ORDER = ["p1", "p5", "p10", "p25", "p50", "p75", "p90", "p95", "p99"];
+
+function fmtStat(val: unknown): string {
+  if (typeof val === "number") return val.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  return String(val);
+}
+
+function ResponseStatsSection({ stats }: { stats: ResponseStats }) {
   if (!stats || typeof stats !== "object") return null;
 
-  const entries = Object.entries(stats).filter(([, v]) => v != null && typeof v !== "object");
+  const summaryEntries = Object.entries(stats).filter(
+    ([k, v]) => v != null && typeof v !== "object" && !PERCENTILE_KEYS.has(k)
+  );
+  const percentiles = PERCENTILE_ORDER
+    .filter((k) => stats[k as keyof ResponseStats] != null)
+    .map((k) => ({ label: k.toUpperCase(), value: stats[k as keyof ResponseStats] as number }));
 
-  if (entries.length === 0) return null;
+  if (summaryEntries.length === 0 && percentiles.length === 0) return null;
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -73,32 +95,68 @@ function ResponseStatsSection({ stats }: { stats: any }) {
           Response Distribution
         </h3>
       </div>
-      <div className="grid grid-cols-4 gap-px bg-surface">
-        {entries.map(([key, val]) => (
-          <div key={key} className="bg-background px-4 py-3">
-            <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground">
-              {key.replace(/_/g, " ")}
-            </p>
-            <p className="mt-1 font-mono text-sm font-semibold text-foreground">
-              {typeof val === "number" ? (val as number).toLocaleString(undefined, { maximumFractionDigits: 4 }) : String(val)}
-            </p>
-          </div>
-        ))}
-      </div>
+
+      {/* Summary stats grid */}
+      {summaryEntries.length > 0 && (
+        <div className="grid grid-cols-5 gap-px bg-surface">
+          {summaryEntries.map(([key, val]) => (
+            <div key={key} className="bg-background px-4 py-3">
+              <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground">
+                {key.replace(/_/g, " ")}
+              </p>
+              <p className="mt-1 font-mono text-sm font-semibold text-foreground">
+                {fmtStat(val)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Percentiles — compact single-row table */}
+      {percentiles.length > 0 && (
+        <div className="border-t border-border overflow-x-auto">
+          <table className="w-full text-center">
+            <thead>
+              <tr>
+                <th className="px-2 py-2 text-left text-[0.6rem] uppercase tracking-wider text-muted-foreground font-semibold w-20">
+                  Percentile
+                </th>
+                {percentiles.map((p) => (
+                  <th
+                    key={p.label}
+                    className="px-2 py-2 text-[0.6rem] uppercase tracking-wider text-muted-foreground font-semibold"
+                  >
+                    {p.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-border/50">
+                <td className="px-2 py-2.5 text-left text-[0.6rem] text-muted-foreground">Value</td>
+                {percentiles.map((p) => (
+                  <td key={p.label} className="px-2 py-2.5 font-mono text-sm font-semibold text-foreground">
+                    {fmtStat(p.value)}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ── Distribution test card ───────────────────────────── */
 
-function DistTestCard({ title, data }: { title: string; data: any }) {
-  if (!data || typeof data !== "object") return null;
+type DistTestInput = ZeroInflation | ExploreOverdispersion;
 
-  const entries = Object.entries(data).filter(([, v]) => v != null);
+function DistTestCard({ title, data }: { title: string; data: DistTestInput }) {
+  const entries = (Object.entries(data) as [string, string | number | boolean | null][]).filter(([, v]) => v != null);
   if (entries.length === 0) return null;
 
-  const pVal = data.p_value ?? data.pvalue ?? data.p;
-  const isSignificant = typeof pVal === "number" && pVal < 0.05;
+  const isSignificant = data.p_value < 0.05;
 
   return (
     <div className={cn(
@@ -131,7 +189,7 @@ function DistTestCard({ title, data }: { title: string; data: any }) {
 
 /* ── VIF section ──────────────────────────────────────── */
 
-const VifSection = memo(function VifSection({ vif }: { vif: any[] }) {
+const VifSection = memo(function VifSection({ vif }: { vif: VifEntry[] }) {
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
@@ -150,7 +208,7 @@ const VifSection = memo(function VifSection({ vif }: { vif: any[] }) {
             </tr>
           </thead>
           <tbody>
-            {vif.map((v: any, i: number) => (
+            {vif.map((v, i) => (
               <tr
                 key={v.feature ?? i}
                 className={cn(
@@ -185,18 +243,18 @@ const VifSection = memo(function VifSection({ vif }: { vif: any[] }) {
 
 /* ── Correlation section ──────────────────────────────── */
 
-const CorrelationSection = memo(function CorrelationSection({ data, title }: { data: any; title: string }) {
+const CorrelationSection = memo(function CorrelationSection({ data, title }: { data: CorrelationData; title: string }) {
   if (!data || typeof data !== "object") return null;
 
   // Handle both matrix format and flat pair list
-  let pairs: Array<{ a: string; b: string; value: number }> = [];
+  let pairs: CorrelationPair[] = [];
 
   if (Array.isArray(data)) {
     pairs = data
-      .filter((d: any) => d.value != null && Math.abs(d.value) > 0.1)
-      .sort((a: any, b: any) => Math.abs(b.value) - Math.abs(a.value))
+      .filter((d) => d.value != null && Math.abs(d.value) > 0.1)
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
       .slice(0, 20);
-  } else if (typeof data === "object") {
+  } else {
     // Matrix format: { colA: { colB: 0.5, ... }, ... }
     const keys = Object.keys(data);
     for (let i = 0; i < keys.length; i++) {
@@ -257,7 +315,7 @@ const CorrelationSection = memo(function CorrelationSection({ data, title }: { d
 
 /* ── Factor summary table ─────────────────────────────── */
 
-const FactorSummaryTable = memo(function FactorSummaryTable({ factors }: { factors: any[] }) {
+const FactorSummaryTable = memo(function FactorSummaryTable({ factors }: { factors: ExploreFactorStat[] }) {
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
@@ -272,12 +330,10 @@ const FactorSummaryTable = memo(function FactorSummaryTable({ factors }: { facto
               <th className="px-4 py-2.5 text-left font-semibold">Factor</th>
               <th className="px-4 py-2.5 text-left font-semibold">Type</th>
               <th className="px-4 py-2.5 text-right font-semibold">Levels / Range</th>
-              <th className="px-4 py-2.5 text-left font-semibold">Shape</th>
-              <th className="px-4 py-2.5 text-left font-semibold">Recommendation</th>
             </tr>
           </thead>
           <tbody>
-            {factors.map((f: any, i: number) => (
+            {factors.map((f, i) => (
               <tr
                 key={f.name}
                 className={cn(
@@ -299,12 +355,6 @@ const FactorSummaryTable = memo(function FactorSummaryTable({ factors }: { facto
                     ? `${f.n_levels ?? f.levels?.length ?? "?"} levels`
                     : f.min != null ? `${f.min}–${f.max}` : "—"
                   }
-                </td>
-                <td className="px-4 py-2 text-[0.7rem] text-muted-foreground">
-                  {f.modeling_hints?.shape?.replace(/_/g, " ") ?? "—"}
-                </td>
-                <td className="px-4 py-2 text-[0.7rem] text-muted-foreground">
-                  {f.modeling_hints?.recommendation ?? "—"}
                 </td>
               </tr>
             ))}

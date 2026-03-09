@@ -2,7 +2,7 @@
  * Exploration types — from rs.explore_data() response.
  */
 
-import type { DiagnosticsData } from "./diagnostics";
+import type { DiagnosticsData, VifEntry } from "./diagnostics";
 
 export interface ExploreResponseBin {
   bin_index: number;
@@ -44,15 +44,71 @@ export interface ExploreFactorStat {
   };
 }
 
+/* ── Response stats ─────────────────────────────────── */
+
+export interface ResponseStats {
+  n_observations: number;
+  total_exposure: number;
+  total_response: number;
+  mean_response: number;
+  mean_rate: number;
+  std_rate: number;
+  min: number;
+  max: number;
+  zeros_count: number;
+  zeros_pct: number;
+  p1: number;
+  p5: number;
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  p95: number;
+  p99: number;
+}
+
+/* ── Correlation types ──────────────────────────────── */
+
+export interface CorrelationPair {
+  a: string;
+  b: string;
+  value: number;
+}
+
+export type CorrelationMatrix = Record<string, Record<string, number>>;
+
+export type CorrelationData = CorrelationPair[] | CorrelationMatrix;
+
+/* ── Zero inflation ─────────────────────────────────── */
+
+export interface ZeroInflation {
+  zero_pct: number;
+  expected_zero_pct: number;
+  vuong_statistic: number;
+  p_value: number;
+  is_zero_inflated: boolean;
+}
+
+/* ── Overdispersion (exploration-level) ─────────────── */
+
+export interface ExploreOverdispersion {
+  pearson_dispersion: number;
+  p_value: number;
+  is_overdispersed: boolean;
+}
+
+/* ── Main exploration data ──────────────────────────── */
+
 export interface ExplorationData {
   data_summary: { n_rows: number; n_columns: number; response_column: string; exposure_column: string };
   factor_stats: ExploreFactorStat[];
-  univariate_tests?: any[];
-  correlations?: any;
-  cramers_v?: any;
-  vif?: any[];
-  zero_inflation?: any;
-  overdispersion?: any;
-  response_stats?: any;
+  univariate_tests?: unknown[];
+  correlations?: CorrelationData;
+  cramers_v?: CorrelationData;
+  vif?: VifEntry[];
+  zero_inflation?: ZeroInflation;
+  overdispersion?: ExploreOverdispersion;
+  response_stats?: ResponseStats;
   null_diagnostics?: DiagnosticsData | null;
 }

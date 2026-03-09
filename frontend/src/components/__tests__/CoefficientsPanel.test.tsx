@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import ModelPanel from "../ModelPanel";
+import CoefficientsPanel from "../CoefficientsPanel";
 import {
   mockFitResult,
   mockDiagnosticsData,
@@ -22,9 +22,9 @@ vi.mock("recharts", () => ({
   ReferenceLine: () => <div data-testid="reference-line" />,
 }));
 
-describe("ModelPanel", () => {
+describe("CoefficientsPanel", () => {
   it("renders coefficient table with data from fit result", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     // Should show coefficients heading with the count
     expect(screen.getByText(/Coefficients/)).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("ModelPanel", () => {
   });
 
   it("shows model metrics when fit result has diagnostics", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     // Should show "Model Metrics" heading
     expect(screen.getByText("Model Metrics")).toBeInTheDocument();
@@ -52,26 +52,26 @@ describe("ModelPanel", () => {
   });
 
   it("shows 'Model fitted successfully' header when fit result is provided", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     expect(screen.getByText("Model fitted successfully")).toBeInTheDocument();
   });
 
   it("shows null model header when no fit result is provided but has null diagnostics", () => {
-    render(<ModelPanel nullDiagnostics={mockDiagnosticsData} />);
+    render(<CoefficientsPanel nullDiagnostics={mockDiagnosticsData} />);
 
     expect(screen.getByText("Null Model (intercept only)")).toBeInTheDocument();
   });
 
-  it("shows baseline metrics heading for null diagnostics", () => {
-    render(<ModelPanel nullDiagnostics={mockDiagnosticsData} />);
+  it("shows metrics heading for null diagnostics", () => {
+    render(<CoefficientsPanel nullDiagnostics={mockDiagnosticsData} />);
 
-    expect(screen.getByText(/Baseline Metrics/)).toBeInTheDocument();
+    expect(screen.getByText("Model Metrics")).toBeInTheDocument();
   });
 
   it("shows both fit result and null diagnostics without error", () => {
     render(
-      <ModelPanel result={mockFitResult} nullDiagnostics={mockDiagnosticsData} />
+      <CoefficientsPanel result={mockFitResult} nullDiagnostics={mockDiagnosticsData} />
     );
 
     // With result provided, it should show "Model fitted successfully"
@@ -82,7 +82,7 @@ describe("ModelPanel", () => {
   });
 
   it("renders nothing meaningful when both result and nullDiagnostics are null", () => {
-    const { container } = render(<ModelPanel />);
+    const { container } = render(<CoefficientsPanel />);
 
     // Should show null model header
     expect(screen.getByText("Null Model (intercept only)")).toBeInTheDocument();
@@ -114,14 +114,14 @@ describe("ModelPanel", () => {
       diagnostics: null,
     };
 
-    render(<ModelPanel result={sparseResult} />);
+    render(<CoefficientsPanel result={sparseResult} />);
 
     // Should still render header
     expect(screen.getByText("Model fitted successfully")).toBeInTheDocument();
   });
 
   it("shows relativities column in coefficient table when diagnostics have coefficient_summary", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     // Coefficient summary entries have relativity data
     // The table should show the "Relativity" column header
@@ -140,17 +140,11 @@ describe("ModelPanel", () => {
     };
 
     // Should not throw
-    const { container } = render(<ModelPanel result={resultWithEmptyCoefs} />);
+    const { container } = render(<CoefficientsPanel result={resultWithEmptyCoefs} />);
     expect(container).toBeTruthy();
 
     // No coefficient table should be rendered since both are empty
     expect(screen.queryByText(/Coefficients/)).not.toBeInTheDocument();
-  });
-
-  it("shows lift chart when diagnostics include lift chart data", () => {
-    render(<ModelPanel result={mockFitResult} />);
-
-    expect(screen.getByText("Lift Chart")).toBeInTheDocument();
   });
 
   it("shows model comparison card when diagnostics include model comparison", () => {
@@ -168,12 +162,13 @@ describe("ModelPanel", () => {
       },
     };
 
-    render(<ModelPanel result={resultWithComparison} />);
+    render(<CoefficientsPanel result={resultWithComparison} />);
 
     expect(screen.getByText("Deviance Reduction")).toBeInTheDocument();
     expect(screen.getByText("AIC Improvement")).toBeInTheDocument();
     expect(screen.getByText("LR Test")).toBeInTheDocument();
-    expect(screen.getByText("10.53%")).toBeInTheDocument();
+    // "10.53%" may appear in both the status strip and comparison card
+    expect(screen.getAllByText("10.53%").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows diagnostic warnings when present", () => {
@@ -188,7 +183,7 @@ describe("ModelPanel", () => {
       },
     };
 
-    render(<ModelPanel result={resultWithWarnings} />);
+    render(<CoefficientsPanel result={resultWithWarnings} />);
 
     expect(screen.getByText("2 diagnostic warnings")).toBeInTheDocument();
     expect(screen.getByText("Overdispersion detected (phi=1.42)")).toBeInTheDocument();
@@ -196,14 +191,14 @@ describe("ModelPanel", () => {
   });
 
   it("shows VIF column when VIF data is present", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     // VIF column should be present since mockDiagnosticsData has VIF data
     expect(screen.getByText("VIF")).toBeInTheDocument();
   });
 
   it("shows Train and Test column headers when test data exists", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     // Should have both Train and Test headers in the metrics table
     expect(screen.getByText("Train")).toBeInTheDocument();
@@ -211,13 +206,13 @@ describe("ModelPanel", () => {
   });
 
   it("shows significance codes footer in coefficient table", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     expect(screen.getByText(/Signif\. codes/)).toBeInTheDocument();
   });
 
   it("shows n_obs and parameters in fitted model subtitle", () => {
-    render(<ModelPanel result={mockFitResult} />);
+    render(<CoefficientsPanel result={mockFitResult} />);
 
     const body = document.body.textContent ?? "";
     expect(body).toContain("50,000");

@@ -76,7 +76,7 @@ export const TERM_COLORS: Record<TermType, { bg: string; text: string; label: st
   expression:         { bg: "bg-zinc-500/15",   text: "text-zinc-400",   label: "Expr" },
 };
 
-export type MainTab = "charts" | "model" | "data" | "history" | "code";
+export type MainTab = "factors" | "coefficients" | "diagnostics" | "stability" | "data" | "history";
 
 export interface VersionChange {
   kind: "added" | "removed" | "modified";

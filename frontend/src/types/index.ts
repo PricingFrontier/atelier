@@ -24,6 +24,12 @@ export type {
   ExploreCatLevel,
   ExploreFactorStat,
   ExplorationData,
+  ResponseStats,
+  CorrelationPair,
+  CorrelationMatrix,
+  CorrelationData,
+  ZeroInflation,
+  ExploreOverdispersion,
 } from "./exploration";
 
 export type {
@@ -47,6 +53,10 @@ export type {
   LiftDecile,
   LiftChart,
   PartialDependence,
+  ModelSummaryData,
+  OverdispersionData,
+  DecileComparison,
+  FactorDivergenceEntry,
   DiagnosticsData,
   FitResult,
 } from "./diagnostics";

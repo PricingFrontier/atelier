@@ -2,11 +2,28 @@
  * Panel showing exploration and diagnostics charts for a selected factor.
  */
 
-import { useState, useRef, memo } from "react";
+import { useState, useRef, memo, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Hash, Type, Loader2 } from "lucide-react";
+import { Hash, Type, Loader2, AlertCircle } from "lucide-react";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+} from "recharts";
 import { cn } from "@/lib/utils";
-import type { ColumnMeta, ExplorationData, DiagnosticsData, FactorDiagnostic } from "@/types";
+import type {
+  ColumnMeta,
+  ExplorationData,
+  DiagnosticsData,
+  FactorDiagnostic,
+  PartialDependence,
+  FactorDeviance,
+} from "@/types";
 import FactorChart from "./FactorChart";
 
 export default memo(function FactorChartsPanel({
@@ -40,6 +57,18 @@ export default memo(function FactorChartsPanel({
   const contDiag = activeSet?.continuous_diagnostics?.[selectedFactor] ?? null;
   const hasDiag = catDiag || contDiag;
   const hints = factorStat?.modeling_hints;
+
+  // Partial dependence for this factor
+  const pdData = useMemo(
+    () => diagnostics?.partial_dependence?.find((p) => p.variable === selectedFactor) ?? null,
+    [diagnostics?.partial_dependence, selectedFactor],
+  );
+
+  // Factor deviance breakdown for this factor
+  const devData = useMemo(
+    () => diagnostics?.factor_deviance?.find((fd) => fd.factor === selectedFactor) ?? null,
+    [diagnostics?.factor_deviance, selectedFactor],
+  );
 
   return (
     <div className="p-6 space-y-6">
@@ -96,7 +125,7 @@ export default memo(function FactorChartsPanel({
         <FactorChart
           title="Actual vs Predicted"
           data={catDiag.map((d) => ({
-            label: String(d.level).length > 14 ? String(d.level).slice(0, 12) + "…" : String(d.level),
+            label: String(d.level).length > 14 ? String(d.level).slice(0, 12) + "\u2026" : String(d.level),
             volume: d.exposure > 0 ? d.exposure : d.n,
             n: d.n,
             exposure: d.exposure,
@@ -116,7 +145,7 @@ export default memo(function FactorChartsPanel({
         <FactorChart
           title="Actual vs Predicted"
           data={contDiag.map((d) => ({
-            label: `${d.range_min}–${d.range_max}`,
+            label: `${d.range_min}\u2013${d.range_max}`,
             volume: d.exposure > 0 ? d.exposure : d.n,
             n: d.n,
             exposure: d.exposure,
@@ -133,12 +162,18 @@ export default memo(function FactorChartsPanel({
         />
       )}
 
+      {/* Partial Dependence Plot — continuous fitted factors */}
+      {pdData && <PartialDependencePlot data={pdData} />}
+
+      {/* Factor Deviance Breakdown — fitted factors */}
+      {devData && <FactorDevianceTable data={devData} />}
+
       {/* Exploration charts (pre-fit) */}
       {!hasDiag && factorStat?.type === "continuous" && factorStat.response_by_bin && factorStat.response_by_bin.length > 0 && (
         <FactorChart
           title="Response Rate by Bin"
           data={factorStat.response_by_bin.map((d) => ({
-            label: `${d.bin_lower}–${d.bin_upper}`,
+            label: `${d.bin_lower}\u2013${d.bin_upper}`,
             volume: d.exposure > 0 ? d.exposure : d.count,
             n: d.count,
             exposure: d.exposure,
@@ -153,7 +188,7 @@ export default memo(function FactorChartsPanel({
         <FactorChart
           title="Response Rate by Level"
           data={factorStat.levels.map((d) => ({
-            label: String(d.level).length > 14 ? String(d.level).slice(0, 12) + "…" : String(d.level),
+            label: String(d.level).length > 14 ? String(d.level).slice(0, 12) + "\u2026" : String(d.level),
             volume: d.exposure > 0 ? d.exposure : d.count,
             n: d.count,
             exposure: d.exposure,
@@ -173,7 +208,7 @@ export default memo(function FactorChartsPanel({
       {explorationLoading && !factorStat && !hasDiag && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          <span className="ml-2 text-sm text-muted-foreground">Loading exploration data…</span>
+          <span className="ml-2 text-sm text-muted-foreground">Loading exploration data\u2026</span>
         </div>
       )}
 
@@ -186,6 +221,191 @@ export default memo(function FactorChartsPanel({
     </div>
   );
 })
+
+/* ── Partial Dependence Plot ─────────────────────────── */
+
+function PartialDependencePlot({ data }: { data: PartialDependence }) {
+  const chartData = useMemo(
+    () =>
+      data.grid_values.map((v, i) => ({
+        x: v,
+        relativity: data.relativities[i],
+      })),
+    [data.grid_values, data.relativities],
+  );
+
+  const renderTooltip = useCallback(({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
+    return (
+      <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-xl">
+        <p className="mb-1 font-semibold text-foreground">
+          {typeof d?.x === "number" ? d.x.toFixed(4) : d?.x}
+        </p>
+        <p className="text-teal-400">
+          Relativity: {d?.relativity?.toFixed(4)}
+        </p>
+      </div>
+    );
+  }, []);
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Partial Dependence
+      </h3>
+      <div className="h-[250px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
+            <XAxis
+              dataKey="x"
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
+              tickLine={false}
+              tickFormatter={(v: number) =>
+                Math.abs(v) >= 1000
+                  ? `${(v / 1000).toFixed(0)}k`
+                  : v % 1 === 0
+                    ? String(v)
+                    : v.toFixed(2)
+              }
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
+              tickLine={false}
+              domain={["auto", "auto"]}
+            />
+            <Tooltip content={renderTooltip} />
+            <ReferenceLine
+              y={1}
+              stroke="rgba(255,255,255,0.3)"
+              strokeDasharray="4 4"
+              label={{
+                value: "Base",
+                position: "right",
+                fontSize: 9,
+                fill: "rgba(255,255,255,0.4)",
+              }}
+            />
+            <Line
+              dataKey="relativity"
+              name="Relativity"
+              stroke="hsl(168 84% 49%)"
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      {(data.shape || data.recommendation) && (
+        <div className="mt-3 flex items-center gap-3 text-[0.65rem] text-muted-foreground">
+          {data.shape && (
+            <span>
+              Shape: <span className="text-foreground/70">{data.shape.replace(/_/g, " ")}</span>
+            </span>
+          )}
+          {data.recommendation && (
+            <span>
+              Recommendation: <span className="text-foreground/70">{data.recommendation}</span>
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Factor Deviance Breakdown Table ─────────────────── */
+
+function FactorDevianceTable({ data }: { data: FactorDeviance }) {
+  const sortedLevels = useMemo(
+    () => [...data.levels].sort((a, b) => b.deviance - a.deviance),
+    [data.levels],
+  );
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Deviance Breakdown
+        </h3>
+        <span className="font-mono text-[0.65rem] text-muted-foreground">
+          Total: {data.total_deviance.toFixed(2)}
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+              <th className="px-4 py-2 text-left font-semibold">Level</th>
+              <th className="px-3 py-2 text-right font-semibold">n</th>
+              <th className="px-3 py-2 text-right font-semibold">Deviance</th>
+              <th className="px-3 py-2 text-right font-semibold">Dev %</th>
+              <th className="px-3 py-2 text-right font-semibold">Mean Dev</th>
+              <th className="px-3 py-2 text-right font-semibold">A/E</th>
+              <th className="px-3 py-2 text-center font-semibold">Problem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedLevels.map((lv, i) => (
+              <tr
+                key={lv.level}
+                className={cn(
+                  "border-b border-border/50 transition-colors",
+                  lv.problem
+                    ? "bg-red-500/[0.06] border-l-2 border-l-red-500"
+                    : i % 2 === 0
+                      ? "bg-transparent"
+                      : "bg-surface",
+                )}
+              >
+                <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/80">
+                  {String(lv.level).length > 20
+                    ? String(lv.level).slice(0, 18) + "\u2026"
+                    : lv.level}
+                </td>
+                <td className="px-3 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
+                  {lv.n.toLocaleString()}
+                </td>
+                <td className="px-3 py-1.5 text-right font-mono text-[0.7rem] text-foreground/80">
+                  {lv.deviance.toFixed(2)}
+                </td>
+                <td className="px-3 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
+                  {lv.deviance_pct.toFixed(2)}%
+                </td>
+                <td className="px-3 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
+                  {lv.mean_deviance.toFixed(4)}
+                </td>
+                <td
+                  className={cn(
+                    "px-3 py-1.5 text-right font-mono text-[0.7rem] font-semibold",
+                    lv.ae_ratio > 1.1
+                      ? "text-red-400"
+                      : lv.ae_ratio < 0.9
+                        ? "text-emerald-400"
+                        : "text-foreground/70",
+                  )}
+                >
+                  {lv.ae_ratio.toFixed(4)}
+                </td>
+                <td className="px-3 py-1.5 text-center">
+                  {lv.problem ? (
+                    <AlertCircle className="inline-block h-3.5 w-3.5 text-red-400" />
+                  ) : (
+                    <span className="text-[0.7rem] text-muted-foreground">&mdash;</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 /* ── Factor diagnostic info panels ────────────────────── */
 
@@ -221,14 +441,14 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
               <p className="mt-1 text-[0.65rem] text-muted-foreground">
                 {diag.score_test.significant
                   ? expectedPct != null && expectedPct >= 1
-                    ? "Strong candidate — expected to meaningfully reduce deviance"
+                    ? "Strong candidate \u2014 expected to meaningfully reduce deviance"
                     : "Adding this factor would significantly improve the model"
                   : "This factor may not improve the model significantly"}
               </p>
             </div>
             <div className="text-right">
               <p className="font-mono text-sm font-semibold text-foreground">
-                χ² = {diag.score_test.statistic.toFixed(2)}
+                \u03C7\u00B2 = {diag.score_test.statistic.toFixed(2)}
               </p>
               <p className="text-[0.6rem] text-muted-foreground">
                 df={diag.score_test.df}, p={diag.score_test.pvalue < 0.0001 ? "<0.0001" : diag.score_test.pvalue.toFixed(4)}
@@ -256,7 +476,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
               </p>
               <p className="mt-1 text-[0.65rem] text-muted-foreground">
                 {devPct != null && devPct >= 2
-                  ? "Major contributor — significantly reduces model deviance"
+                  ? "Major contributor \u2014 significantly reduces model deviance"
                   : devPct != null && devPct >= 0.5
                     ? "Moderate contributor to model fit"
                     : "Minor contributor to model fit"}
@@ -267,7 +487,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
                 {(devPct ?? diag.significance.dev_pct).toFixed(2)}%
               </p>
               <p className="text-[0.6rem] text-muted-foreground">
-                χ²={diag.significance.chi2.toFixed(2)}, p={diag.significance.p < 0.0001 ? "<0.0001" : diag.significance.p.toFixed(4)}
+                \u03C7\u00B2={diag.significance.chi2.toFixed(2)}, p={diag.significance.p < 0.0001 ? "<0.0001" : diag.significance.p.toFixed(4)}
               </p>
             </div>
           </div>
@@ -279,7 +499,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
         <div className="rounded-xl border border-amber-500/15 bg-amber-500/[0.03] p-4">
           <p className="text-xs font-semibold text-amber-400">Residual Pattern Detected</p>
           <p className="mt-1 text-[0.65rem] text-muted-foreground/50">
-            Residual correlation: {diag.residual_pattern.resid_corr.toFixed(4)} · Variance explained: {(diag.residual_pattern.var_explained * 100).toFixed(3)}%
+            Residual correlation: {diag.residual_pattern.resid_corr.toFixed(4)} &middot; Variance explained: {(diag.residual_pattern.var_explained * 100).toFixed(3)}%
           </p>
         </div>
       )}
@@ -323,16 +543,16 @@ function RelativitiesTable({ coefficients }: { coefficients: FactorDiagnostic["c
     >
       <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/80">{c.term}</td>
       <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
-        {c.estimate != null ? c.estimate.toFixed(6) : "—"}
+        {c.estimate != null ? c.estimate.toFixed(6) : "\u2014"}
       </td>
       <td className={cn(
         "px-4 py-1.5 text-right font-mono text-[0.7rem] font-semibold",
         c.relativity != null && c.relativity > 1.05 ? "text-red-400" : c.relativity != null && c.relativity < 0.95 ? "text-emerald-400" : "text-foreground/70"
       )}>
-        {c.relativity != null ? c.relativity.toFixed(4) : "—"}
+        {c.relativity != null ? c.relativity.toFixed(4) : "\u2014"}
       </td>
       <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
-        {c.p_value != null ? (c.p_value < 0.0001 ? "<0.0001" : c.p_value.toFixed(4)) : "—"}
+        {c.p_value != null ? (c.p_value < 0.0001 ? "<0.0001" : c.p_value.toFixed(4)) : "\u2014"}
       </td>
     </tr>
   );

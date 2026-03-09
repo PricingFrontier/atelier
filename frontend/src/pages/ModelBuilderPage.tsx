@@ -8,10 +8,14 @@ import {
   BarChart3,
   Columns3,
   TableProperties,
+  Activity,
+  ShieldCheck,
   Code2,
   Copy,
   Check,
+  CheckCircle2,
   Clock,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiGet, apiPost } from "@/lib/api";
@@ -32,7 +36,10 @@ import HistoryPanel from "@/components/HistoryPanel";
 import FittingOverlay from "@/components/FittingOverlay";
 
 const FactorChartsPanel = lazy(() => import("@/components/charts/FactorChartsPanel"));
-const ModelPanel = lazy(() => import("@/components/ModelPanel"));
+const FactorOverview = lazy(() => import("@/components/FactorOverview"));
+const CoefficientsPanel = lazy(() => import("@/components/CoefficientsPanel"));
+const DiagnosticsPanel = lazy(() => import("@/components/DiagnosticsPanel"));
+const StabilityPanel = lazy(() => import("@/components/StabilityPanel"));
 const DataPanel = lazy(() => import("@/components/DataPanel"));
 
 function TabFallback() {
@@ -44,15 +51,32 @@ function TabFallback() {
 }
 import PageBackground from "@/components/ui/PageBackground";
 
+/** Shape of the model detail API response. */
+interface ModelDetailResponse {
+  version: number;
+  spec?: { terms?: Array<{ column: string; type: string; df?: number; k?: number; monotonicity?: string; expr?: string }>; family?: string; link?: string };
+  coef_table?: FitResult["coef_table"];
+  fit_duration_ms?: number;
+  summary?: string;
+  n_obs?: number;
+  n_validation?: number | null;
+  deviance?: number | null;
+  null_deviance?: number | null;
+  aic?: number | null;
+  bic?: number | null;
+  n_params?: number;
+  diagnostics?: FitResult["diagnostics"];
+}
+
 /** Convert a model detail response into terms array + optional FitResult. */
-function hydrateModel(model: any): { terms: TermSpec[]; fitResult: FitResult | null; version: number } {
+function hydrateModel(model: ModelDetailResponse): { terms: TermSpec[]; fitResult: FitResult | null; version: number } {
   const specTerms = model.spec?.terms ?? [];
-  const terms: TermSpec[] = specTerms.map((t: any) => ({
+  const terms: TermSpec[] = specTerms.map((t) => ({
     column: t.column,
-    type: t.type,
+    type: t.type as TermType,
     df: t.df ?? undefined,
     k: t.k ?? undefined,
-    monotonicity: t.monotonicity ?? undefined,
+    monotonicity: t.monotonicity as TermSpec["monotonicity"],
     expr: t.expr ?? undefined,
     label: t.type === "expression" ? (t.expr ?? t.column) : `${t.column} (${t.type})`,
   }));
@@ -94,6 +118,14 @@ function serializeTerms(terms: TermSpec[]) {
   }));
 }
 
+/** Banner state after a successful fit */
+interface FitBannerState {
+  terms: TermSpec[];
+  result: FitResult;
+  prevResult: FitResult | null;
+  prevTerms: TermSpec[];
+}
+
 const TAG = "ModelBuilder";
 
 export default function ModelBuilderPage() {
@@ -118,8 +150,14 @@ export default function ModelBuilderPage() {
   const [fitError, setFitError] = useState<string | null>(null);
 
   // Main panel state
-  const [activeTab, setActiveTab] = useState<MainTab>("charts");
+  const [activeTab, setActiveTab] = useState<MainTab>("factors");
   const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
+
+  // Code slide-over
+  const [showCode, setShowCode] = useState(false);
+
+  // Fit banner
+  const [fitBanner, setFitBanner] = useState<FitBannerState | null>(null);
 
   // Version / history state
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
@@ -182,7 +220,7 @@ export default function ModelBuilderPage() {
         }
 
         log.info(TAG, `restore: loading latest model id=${hist[0].id}`);
-        const model = await apiGet<any>(`/models/detail/${hist[0].id}`, ac.signal);
+        const model = await apiGet<ModelDetailResponse>(`/models/detail/${hist[0].id}`, ac.signal);
         if (ac.signal.aborted) return;
 
         const hydrated = hydrateModel(model);
@@ -273,10 +311,21 @@ export default function ModelBuilderPage() {
     return map;
   }, [terms]);
 
+  // Refs to capture previous state for banner deltas
+  const prevFitRef = useRef<FitResult | null>(null);
+  const prevTermsRef = useRef<TermSpec[]>([]);
+
   const handleFit = useCallback(async () => {
     if (!config?.datasetPath || terms.length === 0) return;
     log.info(TAG, `handleFit: ${terms.length} terms  family=${config.family}  response=${config.response}`);
     log.debug(TAG, "handleFit terms:", terms.map((t) => `${t.column}(${t.type})`));
+
+    // Capture previous state before clearing
+    const prevResult = fitResult;
+    const prevTerms = [...terms];
+    prevFitRef.current = prevResult;
+    prevTermsRef.current = prevTerms;
+
     setFitting(true);
     setFitError(null);
     setFitResult(null);
@@ -297,6 +346,22 @@ export default function ModelBuilderPage() {
       const fitElapsed = Math.round(performance.now() - t0);
       log.info(TAG, `handleFit SUCCESS in ${fitElapsed}ms  deviance=${data.deviance}  aic=${data.aic}  n_obs=${data.n_obs}`);
       setFitResult(data);
+
+      // Set fit banner
+      setFitBanner({
+        terms: [...terms],
+        result: data,
+        prevResult,
+        prevTerms: prevTermsRef.current,
+      });
+
+      // Auto-focus: if a new term was added, navigate to it
+      const prevTermCols = new Set(prevTermsRef.current.map((t) => `${t.column}:${t.type}`));
+      const newTerm = terms.find((t) => !prevTermCols.has(`${t.column}:${t.type}`));
+      if (newTerm) {
+        setSelectedFactor(newTerm.column);
+        setActiveTab("factors");
+      }
 
       // Auto-save to DB
       if (config.projectId) {
@@ -329,20 +394,21 @@ export default function ModelBuilderPage() {
           fetchHistory();
         } catch (err) { log.error(TAG, "auto-save FAILED", err); }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const fitElapsed = Math.round(performance.now() - t0);
-      log.error(TAG, `handleFit FAILED after ${fitElapsed}ms: ${err.message}`, err);
-      setFitError(err.message || "Model fit failed");
+      const message = err instanceof Error ? err.message : "Model fit failed";
+      log.error(TAG, `handleFit FAILED after ${fitElapsed}ms: ${message}`, err);
+      setFitError(message);
     } finally {
       setFitting(false);
     }
-  }, [config, terms, fetchHistory]);
+  }, [config, terms, fetchHistory, fitResult]);
 
   const handleRestoreVersion = useCallback(async (modelId: string) => {
     log.info(TAG, `restoreVersion: modelId=${modelId}`);
     setRestoring(true);
     try {
-      const model = await apiGet<any>(`/models/detail/${modelId}`);
+      const model = await apiGet<ModelDetailResponse>(`/models/detail/${modelId}`);
       const hydrated = hydrateModel(model);
       log.info(TAG, `restoreVersion: hydrated v${hydrated.version}  terms=${hydrated.terms.length}  hasFit=${!!hydrated.fitResult}`);
       setTerms(hydrated.terms);
@@ -355,7 +421,13 @@ export default function ModelBuilderPage() {
   const handleFactorClick = useCallback((col: ColumnMeta) => {
     log.debug(TAG, `factorClick: ${col.name}  is_cat=${col.is_categorical}  is_num=${col.is_numeric}`);
     setSelectedFactor((prev) => prev === col.name ? null : col.name);
-    setActiveTab("charts");
+    setActiveTab("factors");
+  }, []);
+
+  // Cross-tab navigation: navigate to a specific factor from other tabs
+  const navigateToFactor = useCallback((factorName: string) => {
+    setSelectedFactor(factorName);
+    setActiveTab("factors");
   }, []);
 
   if (!config) {
@@ -409,6 +481,20 @@ export default function ModelBuilderPage() {
           {config.offset && <ConfigPill label="Offset" value={config.offset} />}
           {config.weights && <ConfigPill label="Weights" value={config.weights} />}
         </div>
+
+        {/* Code button in header */}
+        <button
+          onClick={() => setShowCode(!showCode)}
+          className={cn(
+            "ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors",
+            showCode
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+          )}
+        >
+          <Code2 className="h-3.5 w-3.5" />
+          Code
+        </button>
       </header>
 
       <div className="relative z-10 flex flex-1 overflow-hidden">
@@ -432,25 +518,41 @@ export default function ModelBuilderPage() {
           {(exploration || fitResult || terms.length > 0) && (
             <div className="flex shrink-0 items-center gap-1 border-b border-border px-4 py-2">
               <TabButton
-                active={activeTab === "charts"}
-                onClick={() => setActiveTab("charts")}
+                active={activeTab === "factors"}
+                onClick={() => setActiveTab("factors")}
                 icon={<BarChart3 className="h-3.5 w-3.5" />}
-                label="Charts"
+                label="Factors"
               />
+              {(fitResult || exploration?.null_diagnostics) && (
+                <TabButton
+                  active={activeTab === "coefficients"}
+                  onClick={() => setActiveTab("coefficients")}
+                  icon={<TableProperties className="h-3.5 w-3.5" />}
+                  label="Coefficients"
+                />
+              )}
+              {fitResult?.diagnostics && (
+                <TabButton
+                  active={activeTab === "diagnostics"}
+                  onClick={() => setActiveTab("diagnostics")}
+                  icon={<Activity className="h-3.5 w-3.5" />}
+                  label="Diagnostics"
+                />
+              )}
+              {fitResult?.diagnostics?.train_test?.test && (
+                <TabButton
+                  active={activeTab === "stability"}
+                  onClick={() => setActiveTab("stability")}
+                  icon={<ShieldCheck className="h-3.5 w-3.5" />}
+                  label="Stability"
+                />
+              )}
               {exploration && (
                 <TabButton
                   active={activeTab === "data"}
                   onClick={() => setActiveTab("data")}
                   icon={<Columns3 className="h-3.5 w-3.5" />}
                   label="Data"
-                />
-              )}
-              {(fitResult || exploration?.null_diagnostics) && (
-                <TabButton
-                  active={activeTab === "model"}
-                  onClick={() => setActiveTab("model")}
-                  icon={<TableProperties className="h-3.5 w-3.5" />}
-                  label="Model"
                 />
               )}
               {history.length > 0 && (
@@ -461,37 +563,16 @@ export default function ModelBuilderPage() {
                   label={`History (${history.length})`}
                 />
               )}
-              <TabButton
-                active={activeTab === "code"}
-                onClick={() => setActiveTab("code")}
-                icon={<Code2 className="h-3.5 w-3.5" />}
-                label="Code"
-              />
             </div>
           )}
+
+          {/* Fit banner */}
+          {fitBanner && <FitBanner banner={fitBanner} onDismiss={() => setFitBanner(null)} />}
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {explorationLoading && !exploration ? (
               <FittingOverlay />
-            ) : activeTab === "code" && config ? (
-              <CodePanel config={config} terms={terms} />
-            ) : activeTab === "data" && exploration ? (
-              <Suspense fallback={<TabFallback />}>
-                <DataPanel exploration={exploration} />
-              </Suspense>
-            ) : activeTab === "history" ? (
-              <HistoryPanel
-                history={history}
-                loading={historyLoading}
-                currentVersion={currentVersion}
-                onRestore={handleRestoreVersion}
-                restoring={restoring}
-              />
-            ) : activeTab === "model" && (fitResult || exploration?.null_diagnostics) ? (
-              <Suspense fallback={<TabFallback />}>
-                <ModelPanel result={fitResult} nullDiagnostics={exploration?.null_diagnostics} />
-              </Suspense>
             ) : explorationError ? (
               <div className="flex flex-1 items-center justify-center p-6">
                 <div className="max-w-md text-center" style={{ animation: "fadeUp 0.4s ease-out both" }}>
@@ -513,7 +594,31 @@ export default function ModelBuilderPage() {
                   <p className="mt-2 text-xs text-muted-foreground/40">Check your terms and try again</p>
                 </div>
               </div>
-            ) : selectedFactor ? (
+            ) : activeTab === "data" && exploration ? (
+              <Suspense fallback={<TabFallback />}>
+                <DataPanel exploration={exploration} />
+              </Suspense>
+            ) : activeTab === "history" ? (
+              <HistoryPanel
+                history={history}
+                loading={historyLoading}
+                currentVersion={currentVersion}
+                onRestore={handleRestoreVersion}
+                restoring={restoring}
+              />
+            ) : activeTab === "coefficients" && (fitResult || exploration?.null_diagnostics) ? (
+              <Suspense fallback={<TabFallback />}>
+                <CoefficientsPanel result={fitResult} nullDiagnostics={exploration?.null_diagnostics} onNavigateToFactor={navigateToFactor} />
+              </Suspense>
+            ) : activeTab === "diagnostics" && fitResult?.diagnostics ? (
+              <Suspense fallback={<TabFallback />}>
+                <DiagnosticsPanel diagnostics={fitResult.diagnostics} />
+              </Suspense>
+            ) : activeTab === "stability" && fitResult?.diagnostics?.train_test?.test ? (
+              <Suspense fallback={<TabFallback />}>
+                <StabilityPanel diagnostics={fitResult.diagnostics} />
+              </Suspense>
+            ) : activeTab === "factors" && selectedFactor ? (
               <Suspense fallback={<TabFallback />}>
                 <FactorChartsPanel
                   selectedFactor={selectedFactor}
@@ -526,6 +631,17 @@ export default function ModelBuilderPage() {
                   devPct={factorBadgeMap.get(selectedFactor)?.devPct}
                 />
               </Suspense>
+            ) : activeTab === "factors" && !selectedFactor ? (
+              <Suspense fallback={<TabFallback />}>
+                <FactorOverview
+                  diagnostics={fitResult?.diagnostics ?? exploration?.null_diagnostics ?? null}
+                  exploration={exploration}
+                  terms={terms}
+                  onSelectFactor={(name: string) => {
+                    setSelectedFactor(name);
+                  }}
+                />
+              </Suspense>
             ) : (
               <div className="flex flex-1 items-center justify-center p-6">
                 <div className="text-center" style={{ animation: "fadeUp 0.6s ease-out 0.2s both" }}>
@@ -534,10 +650,10 @@ export default function ModelBuilderPage() {
                   </div>
                   <p className="text-sm font-medium text-foreground/60">
                     {fitting
-                      ? "Fitting model…"
+                      ? "Fitting model\u2026"
                       : terms.length === 0
                         ? "Click a factor to explore, right-click to add to model"
-                        : `${terms.length} term${terms.length === 1 ? "" : "s"} added — hit Fit Model`}
+                        : `${terms.length} term${terms.length === 1 ? "" : "s"} added \u2014 hit Fit Model`}
                   </p>
                   <p className="mt-1.5 text-xs text-muted-foreground/30">
                     {fitting
@@ -552,7 +668,135 @@ export default function ModelBuilderPage() {
           </div>
         </main>
       </div>
+
+      {/* Code slide-over panel */}
+      {showCode && (
+        <div className="fixed right-0 top-14 bottom-0 z-50 w-[480px] border-l border-border bg-background shadow-2xl overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <span className="text-sm font-medium">Generated Code</span>
+            <button onClick={() => setShowCode(false)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <CodePanel config={config} terms={terms} />
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ---- Fit banner ---- */
+
+function FitBanner({ banner, onDismiss }: { banner: FitBannerState; onDismiss: () => void }) {
+  const { result, prevResult, prevTerms, terms: bannerTerms } = banner;
+
+  // Compute term changes
+  const termChanges = useMemo(() => {
+    const prevSet = new Set(prevTerms.map((t) => `${t.column}:${t.type}`));
+    const currSet = new Set(bannerTerms.map((t) => `${t.column}:${t.type}`));
+
+    const added: string[] = [];
+    const removed: string[] = [];
+
+    for (const t of bannerTerms) {
+      const key = `${t.column}:${t.type}`;
+      if (!prevSet.has(key)) {
+        const typeLabel = t.type === "bs" ? `BS${t.df ?? ""}` : t.type === "ns" ? `NS${t.df ?? ""}` : t.type.charAt(0).toUpperCase() + t.type.slice(1);
+        added.push(`+${t.column}(${typeLabel})`);
+      }
+    }
+    for (const t of prevTerms) {
+      const key = `${t.column}:${t.type}`;
+      if (!currSet.has(key)) {
+        removed.push(`-${t.column}`);
+      }
+    }
+
+    return [...added, ...removed];
+  }, [bannerTerms, prevTerms]);
+
+  // Compute deltas
+  const devDelta = useMemo(() => {
+    if (result.deviance == null || prevResult?.deviance == null) return null;
+    if (prevResult.deviance === 0) return null;
+    return ((result.deviance - prevResult.deviance) / Math.abs(prevResult.deviance)) * 100;
+  }, [result.deviance, prevResult?.deviance]);
+
+  const aicDelta = useMemo(() => {
+    if (result.aic == null || prevResult?.aic == null) return null;
+    return result.aic - prevResult.aic;
+  }, [result.aic, prevResult?.aic]);
+
+  const giniDelta = useMemo(() => {
+    const currGini = result.diagnostics?.train_test?.train?.gini;
+    const prevGini = prevResult?.diagnostics?.train_test?.train?.gini;
+    if (currGini == null || prevGini == null) return null;
+    return currGini - prevGini;
+  }, [result.diagnostics, prevResult?.diagnostics]);
+
+  return (
+    <div
+      className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2 text-[0.75rem]"
+      style={{ animation: "fadeUp 0.3s ease-out both" }}
+    >
+      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+      <span className="text-emerald-400 font-medium">Fit complete</span>
+
+      {termChanges.length > 0 && (
+        <>
+          <span className="text-muted-foreground/30">&middot;</span>
+          <span className="text-foreground/70">{termChanges.join(", ")}</span>
+        </>
+      )}
+
+      {devDelta != null && (
+        <>
+          <span className="text-muted-foreground/30">&middot;</span>
+          <span className="text-muted-foreground/50">Dev</span>
+          <DeltaValue value={devDelta} suffix="%" invert />
+        </>
+      )}
+
+      {aicDelta != null && (
+        <>
+          <span className="text-muted-foreground/30">&middot;</span>
+          <span className="text-muted-foreground/50">AIC</span>
+          <DeltaValue value={aicDelta} invert />
+        </>
+      )}
+
+      {giniDelta != null && (
+        <>
+          <span className="text-muted-foreground/30">&middot;</span>
+          <span className="text-muted-foreground/50">Gini</span>
+          <DeltaValue value={giniDelta} dp={4} />
+        </>
+      )}
+
+      <span className="text-muted-foreground/30">&middot;</span>
+      <span className="text-muted-foreground/50">{result.fit_duration_ms}ms</span>
+
+      <button
+        onClick={onDismiss}
+        className="ml-auto text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+/** Small inline delta display: green for improvements, red for regressions */
+function DeltaValue({ value, suffix, dp = 1, invert = false }: { value: number; suffix?: string; dp?: number; invert?: boolean }) {
+  // invert=true means negative values are good (deviance, AIC going down)
+  const isGood = invert ? value < 0 : value > 0;
+  const sign = value > 0 ? "+" : "";
+  const formatted = `${sign}${value.toFixed(dp)}${suffix ?? ""}`;
+
+  return (
+    <span className={cn("font-mono", isGood ? "text-emerald-400" : "text-red-400")}>
+      {formatted}
+    </span>
   );
 }
 

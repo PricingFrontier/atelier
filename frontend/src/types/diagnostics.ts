@@ -216,10 +216,62 @@ export interface PartialDependence {
   recommendation: string;
 }
 
+/* ── Model summary ──────────────────────────────────── */
+export interface ModelSummaryData {
+  formula: string;
+  family: string;
+  link: string;
+  n_obs: number;
+  n_params: number;
+  df_resid: number;
+  converged: boolean;
+  iterations: number;
+  scale: number;
+  scale_pearson: number;
+  null_deviance: number;
+}
+
+/* ── Overdispersion detail ─────────────────────────── */
+export interface OverdispersionData {
+  pearson_dispersion: number;
+  pearson_chi2: number;
+  df_resid: number;
+  raw_dispersion: number;
+  mean_count: number;
+  var_count: number;
+  severity: "none" | "mild" | "moderate" | "severe";
+  recommendation: string;
+}
+
+/* ── Train/test stability fields ───────────────────── */
+export interface DecileComparison {
+  decile: number;
+  train_ae: number;
+  test_ae: number;
+  ae_diff: number;
+}
+
+export interface FactorDivergenceEntry {
+  level: string;
+  train_ae: number;
+  test_ae: number;
+  ae_diff: number;
+}
+
 /* ── Full diagnostics response ───────────────────────── */
 export interface DiagnosticsData {
-  model_summary: any;
-  train_test: { train: TrainTestSet; test?: TrainTestSet };
+  model_summary: ModelSummaryData;
+  train_test: {
+    train: TrainTestSet;
+    test?: TrainTestSet;
+    gini_gap?: number;
+    ae_ratio_diff?: number;
+    decile_comparison?: DecileComparison[];
+    factor_divergence?: Record<string, FactorDivergenceEntry[]>;
+    overfitting_risk?: boolean;
+    calibration_drift?: boolean;
+    unstable_factors?: string[];
+  };
   calibration?: CalibrationData;
   residual_summary?: ResidualSummary;
   factors?: FactorDiagnostic[];
@@ -232,6 +284,7 @@ export interface DiagnosticsData {
   factor_deviance?: FactorDeviance[];
   lift_chart?: LiftChart;
   partial_dependence?: PartialDependence[];
+  overdispersion?: OverdispersionData;
 }
 
 export interface FitResult {

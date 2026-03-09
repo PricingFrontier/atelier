@@ -262,13 +262,17 @@ export const mockExplorationData: ExplorationData = {
 
 export const mockDiagnosticsData: DiagnosticsData = {
   model_summary: {
+    formula: 'claim_count ~ region + vehicle_age + driver_age + fuel_type',
     family: 'poisson',
     link: 'log',
     n_obs: 50000,
     n_params: 14,
-    deviance: 20400,
+    df_resid: 49986,
+    converged: true,
+    iterations: 5,
+    scale: 1.0,
+    scale_pearson: 1.042,
     null_deviance: 22800,
-    aic: 40828,
   },
   train_test: {
     train: {
