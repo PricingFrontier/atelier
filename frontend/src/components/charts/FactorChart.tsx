@@ -57,13 +57,13 @@ export default memo(function FactorChart({
         {tooltipType === "diag" ? (
           <>
             <p className="text-blue-400">Actual: {d?.rate1?.toFixed(4)}</p>
-            <p className="text-emerald-400">Predicted: {d?.rate2?.toFixed(4)}</p>
+            <p className="text-amber-400">Predicted: {d?.rate2?.toFixed(4)}</p>
           </>
         ) : (
           <p className="text-blue-400">Rate: {d?.rate1?.toFixed(4)}</p>
         )}
         <p className="text-muted-foreground">{volumeLabel}: {d?.volume?.toLocaleString(undefined, { maximumFractionDigits: 1 })}</p>
-        <p className="text-muted-foreground/70">n = {d?.n?.toLocaleString()}</p>
+        <p className="text-muted-foreground">n = {d?.n?.toLocaleString()}</p>
       </div>
     );
   };
@@ -76,22 +76,22 @@ export default memo(function FactorChart({
       <div className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
               tickLine={false}
               interval={0}
               angle={rotateLabels ? -35 : 0}
               textAnchor={rotateLabels ? "end" : "middle"}
               height={rotateLabels ? 60 : 30}
             />
-            <YAxis yAxisId="vol" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} tickLine={false} />
-            <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }} axisLine={{ stroke: "rgba(255,255,255,0.08)" }} tickLine={false} />
+            <YAxis yAxisId="vol" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }} axisLine={{ stroke: "rgba(255,255,255,0.15)" }} tickLine={false} />
+            <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }} axisLine={{ stroke: "rgba(255,255,255,0.15)" }} tickLine={false} />
             <Tooltip content={renderTooltip} />
-            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.5)" }} />
-            <Bar yAxisId="vol" dataKey="volume" name={volumeLabel} fill="hsl(220 15% 40% / 0.35)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.7)" }} />
+            <Bar yAxisId="vol" dataKey="volume" name={volumeLabel} fill="hsl(220 20% 45% / 0.5)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
             {lines.map((l) => (
               <Line key={l.key} yAxisId="rate" dataKey={l.key} name={l.name} stroke={l.color} strokeWidth={2} dot={{ r: 3, fill: l.color }} isAnimationActive={false} />
             ))}

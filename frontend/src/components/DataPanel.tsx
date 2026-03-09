@@ -161,7 +161,7 @@ function VifSection({ vif }: { vif: any[] }) {
                 <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{v.feature}</td>
                 <td className={cn(
                   "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
-                  v.vif > 10 ? "text-red-400" : v.vif > 5 ? "text-amber-400" : v.vif > 2.5 ? "text-amber-400/60" : "text-foreground/60"
+                  v.vif > 10 ? "text-red-400" : v.vif > 5 ? "text-amber-400" : v.vif > 2.5 ? "text-amber-400" : "text-foreground/70"
                 )}>
                   {typeof v.vif === "number" ? v.vif.toFixed(2) : "—"}
                 </td>
@@ -242,7 +242,7 @@ function CorrelationSection({ data, title }: { data: any; title: string }) {
                 <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/80">{p.b}</td>
                 <td className={cn(
                   "px-4 py-1.5 text-right font-mono text-[0.7rem] font-semibold",
-                  Math.abs(p.value) > 0.7 ? "text-red-400" : Math.abs(p.value) > 0.4 ? "text-amber-400" : "text-foreground/60"
+                  Math.abs(p.value) > 0.7 ? "text-red-400" : Math.abs(p.value) > 0.4 ? "text-amber-400" : "text-foreground/70"
                 )}>
                   {p.value.toFixed(4)}
                 </td>

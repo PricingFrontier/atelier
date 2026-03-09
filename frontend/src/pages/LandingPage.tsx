@@ -103,7 +103,7 @@ export default function LandingPage() {
           >
             <Plus className="h-[18px] w-[18px] opacity-50 transition-opacity group-hover:opacity-80" />
             New Model
-            <kbd className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[0.65rem] font-normal text-muted-foreground/60 border border-border transition-colors group-hover:text-muted-foreground">
+            <kbd className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[0.65rem] font-normal text-muted-foreground border border-border transition-colors group-hover:text-foreground">
               N
             </kbd>
           </button>
@@ -112,7 +112,7 @@ export default function LandingPage() {
         {/* Saved projects */}
         {projects.length > 0 && (
           <div className="mt-10 animate-[fadeUp_0.8s_ease-out_0.6s_both]">
-            <p className="mb-4 text-[0.65rem] uppercase tracking-[0.15em] text-muted-foreground/60">
+            <p className="mb-4 text-[0.65rem] uppercase tracking-[0.15em] text-muted-foreground">
               Recent Projects
             </p>
             <div className="flex flex-col items-center gap-2">
@@ -130,7 +130,7 @@ export default function LandingPage() {
                     <p className="truncate text-sm font-medium text-foreground/80 group-hover:text-foreground">
                       {p.name}
                     </p>
-                    <div className="flex items-center gap-2 text-[0.65rem] text-muted-foreground/60">
+                    <div className="flex items-center gap-2 text-[0.65rem] text-muted-foreground">
                       {p.response && <span>{p.response}</span>}
                       {p.family && <span>· {p.family}</span>}
                       <span>· {p.n_versions} version{p.n_versions !== 1 ? "s" : ""}</span>
@@ -145,12 +145,12 @@ export default function LandingPage() {
                       e.stopPropagation();
                       handleDeleteProject(p.id);
                     }}
-                    className="rounded-lg p-1.5 text-muted-foreground/40 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                    className="rounded-lg p-1.5 text-muted-foreground/70 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
                     title="Delete project"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
+                  <ArrowRight className="h-4 w-4 text-muted-foreground/70 transition group-hover:translate-x-0.5 group-hover:text-foreground" />
                 </div>
               ))}
             </div>
@@ -160,8 +160,8 @@ export default function LandingPage() {
 
       {/* Bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-6 p-5 animate-[fadeIn_0.8s_ease-out_0.8s_both]">
-        <span className="text-[0.7rem] tracking-wider text-muted-foreground/60">
-          Powered by <span className="font-medium text-muted-foreground">Pricing Frontier</span>
+        <span className="text-[0.7rem] tracking-wider text-muted-foreground">
+          Powered by <span className="font-medium text-foreground/70">Pricing Frontier</span>
         </span>
       </div>
     </div>

@@ -37,4 +37,16 @@ async def ensure_schema() -> None:
                 log.info("[migrations] added column %s.%s (%s)", table, column, col_type)
             except Exception:
                 log.debug("[migrations] column %s.%s already exists", table, column)
+    # Create unique index for concurrency safety on (project_id, version).
+    _INDEX_MIGRATIONS: list[str] = [
+        "CREATE UNIQUE INDEX IF NOT EXISTS uix_model_project_version ON models(project_id, version)",
+    ]
+    log.info("[migrations] running %d index migrations", len(_INDEX_MIGRATIONS))
+    async with engine.begin() as conn:
+        for ddl in _INDEX_MIGRATIONS:
+            try:
+                await conn.execute(text(ddl))
+                log.info("[migrations] executed: %s", ddl)
+            except Exception:
+                log.debug("[migrations] index already exists or skipped: %s", ddl)
     log.info("[migrations] schema migration complete")

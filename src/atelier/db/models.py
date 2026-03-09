@@ -11,6 +11,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -41,6 +42,9 @@ class Project(Base):
 
 class Model(Base):
     __tablename__ = "models"
+    __table_args__ = (
+        UniqueConstraint("project_id", "version", name="uix_model_project_version"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(

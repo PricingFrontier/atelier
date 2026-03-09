@@ -108,16 +108,16 @@ function ContextMenuItem({
             : "text-muted-foreground hover:bg-accent hover:text-foreground"
         )}
       >
-        {item.icon && <span className="text-muted-foreground/60">{item.icon}</span>}
+        {item.icon && <span className="text-muted-foreground">{item.icon}</span>}
         <div className="flex-1">
           <span>{item.label}</span>
           {item.description && (
-            <span className="ml-2 text-[0.65rem] text-muted-foreground/40">
+            <span className="ml-2 text-[0.65rem] text-muted-foreground/70">
               {item.description}
             </span>
           )}
         </div>
-        {hasSubmenu && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />}
+        {hasSubmenu && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/70" />}
       </button>
 
       {/* Submenu — portalled to body to escape transform-based containing blocks */}
@@ -140,11 +140,11 @@ function ContextMenuItem({
                 }}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                {sub.icon && <span className="text-muted-foreground/60">{sub.icon}</span>}
+                {sub.icon && <span className="text-muted-foreground">{sub.icon}</span>}
                 <div className="flex-1">
                   <span>{sub.label}</span>
                   {sub.description && (
-                    <span className="ml-2 text-[0.65rem] text-muted-foreground/40">
+                    <span className="ml-2 text-[0.65rem] text-muted-foreground/70">
                       {sub.description}
                     </span>
                   )}

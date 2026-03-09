@@ -41,16 +41,29 @@ class TestLoadDataframe:
         assert exc_info.value.status_code == 400
         assert "not found" in str(exc_info.value.detail).lower()
 
-    def test_corrupt_file_raises(self, tmp_path):
-        bad = tmp_path / "bad.csv"
-        bad.write_text("this is not,,,valid\ncsv\x00data\n\x00\x01\x02")
-        # Should either load (polars is lenient) or raise HTTPException, not crash
-        try:
-            df = load_dataframe(bad)
-            # If polars loads it, that's fine — it's lenient with CSVs
-            assert isinstance(df, pl.DataFrame)
-        except HTTPException as e:
-            assert e.status_code == 400
+    def test_corrupt_parquet_raises_400(self, tmp_path):
+        """A file with .parquet extension but garbage content must fail."""
+        bad = tmp_path / "bad.parquet"
+        bad.write_bytes(b"\x00\x01\x02\x03 not a parquet file")
+        with pytest.raises(HTTPException) as exc_info:
+            load_dataframe(bad)
+        assert exc_info.value.status_code == 400
+
+    def test_empty_csv_raises(self, tmp_path):
+        """An empty CSV file should raise a clear error."""
+        empty = tmp_path / "empty.csv"
+        empty.write_text("")
+        with pytest.raises(HTTPException) as exc_info:
+            load_dataframe(empty)
+        assert exc_info.value.status_code == 400
+
+    def test_single_row_loads(self, tmp_path):
+        """A CSV with just one data row should load fine."""
+        csv_file = tmp_path / "single.csv"
+        csv_file.write_text("a,b\n1,2\n")
+        df = load_dataframe(csv_file)
+        assert df.height == 1
+        assert set(df.columns) == {"a", "b"}
 
 
 # ---------------------------------------------------------------------------
@@ -214,3 +227,47 @@ class TestApplySplit:
         assert train.height == expected_train
         assert val is not None
         assert val.height == expected_val
+
+    def test_empty_mapping(self, sample_df):
+        """Empty mapping — no values mapped to train, returns full df."""
+        split = SplitSpec(column="Group", mapping={})
+        train, val = apply_split(sample_df, split)
+        assert train.height == sample_df.height
+        assert val is None
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    def test_classify_threshold_boundary_50(self):
+        """Column with exactly 50 unique values should be categorical (threshold=50)."""
+        df = pl.DataFrame({"x": list(range(50)) * 2})
+        cat, cont = classify_columns(df, set(), cat_threshold=50)
+        assert "x" in cat
+
+    def test_classify_threshold_boundary_51(self):
+        """Column with 51 unique values should be continuous (threshold=50)."""
+        df = pl.DataFrame({"x": list(range(51)) + [0] * 49})
+        cat, cont = classify_columns(df, set(), cat_threshold=50)
+        assert "x" in cont
+
+    def test_column_meta_with_nulls(self):
+        """Column with nulls should report correct n_missing."""
+        df = pl.DataFrame({"x": [1, None, 3, None, 5]})
+        meta = column_meta(df)
+        assert meta[0]["n_missing"] == 2
+
+    def test_column_meta_all_null(self):
+        """All-null column should have n_missing equal to height."""
+        df = pl.DataFrame({"x": [None, None, None]}, schema={"x": pl.Int64})
+        meta = column_meta(df)
+        assert meta[0]["n_missing"] == 3
+
+    def test_classify_string_always_categorical(self):
+        """String columns are always categorical regardless of cardinality."""
+        # 100 unique strings — exceeds default threshold but still categorical
+        df = pl.DataFrame({"s": [f"val_{i}" for i in range(100)]})
+        cat, cont = classify_columns(df, set())
+        assert "s" in cat

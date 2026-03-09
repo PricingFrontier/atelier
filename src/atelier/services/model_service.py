@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from atelier.db.engine import get_session_factory
 from atelier.db.models import Model, Project
@@ -81,7 +82,15 @@ async def save_null_model(
             )
             session.add(null_model_row)
             project.n_versions = 1
-            await session.commit()
-            log.info("[model_service] saved null model as v1 for project '%s'", project.name)
+            try:
+                await session.commit()
+                log.info("[model_service] saved null model as v1 for project '%s'", project.name)
+            except IntegrityError:
+                # Another concurrent explore already saved v1 — that's fine.
+                log.info(
+                    "[model_service] null model v1 already exists for project '%s' (concurrent insert); ignoring",
+                    project.name,
+                )
+                await session.rollback()
     except Exception as exc:
         log.warning("[model_service] failed to save null model (non-fatal): %s", exc)

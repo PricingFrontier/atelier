@@ -71,7 +71,7 @@ export default memo(function ModelPanel({ result, nullDiagnostics }: { result?: 
           <p className="text-sm font-semibold text-foreground">
             {isNullModel ? "Null Model (intercept only)" : "Model fitted successfully"}
           </p>
-          <p className="text-[0.7rem] text-muted-foreground/50">
+          <p className="text-[0.7rem] text-muted-foreground">
             {isNullModel
               ? `${train?.n_obs?.toLocaleString() ?? "—"} train${test ? ` · ${test.n_obs?.toLocaleString()} test` : ""} · Baseline for comparison`
               : <>{result.n_obs.toLocaleString()} train
@@ -125,7 +125,7 @@ function WarningsBanner({ warnings }: { warnings: DiagnosticsData["warnings"] & 
           return (
             <div key={i} className="flex items-start gap-2">
               <Icon className="mt-0.5 h-3 w-3 shrink-0 text-amber-400/60" />
-              <p className="text-[0.7rem] text-amber-200/70 leading-relaxed">{w.message}</p>
+              <p className="text-[0.7rem] text-amber-200/90 leading-relaxed">{w.message}</p>
             </div>
           );
         })}
@@ -156,7 +156,7 @@ function MetricsGrid({
   isBaseline?: boolean;
 }) {
   const hasTest = !!test;
-  const valColor = isBaseline ? "text-foreground/50" : "text-foreground";
+  const valColor = isBaseline ? "text-foreground/70" : "text-foreground";
 
   const metrics = [
     {
@@ -184,7 +184,7 @@ function MetricsGrid({
       <div className="border-b border-border px-4 py-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {isBaseline
-            ? <>Baseline Metrics <span className="font-normal text-muted-foreground/60">(null model)</span></>
+            ? <>Baseline Metrics <span className="font-normal text-muted-foreground">(null model)</span></>
             : "Model Metrics"}
         </h3>
       </div>
@@ -217,7 +217,7 @@ function MetricsGrid({
                 {hasTest && (
                   <td className="px-4 py-2.5 text-right font-mono text-[0.75rem]">
                     {isBaseline
-                      ? <span className="text-foreground/50">{fmt(m.test, m.dp)}</span>
+                      ? <span className="text-foreground/70">{fmt(m.test, m.dp)}</span>
                       : <MetricDelta value={m.test} trainValue={m.train} dp={m.dp} lowerBetter={m.lower_better} target={m.target} />}
                   </td>
                 )}
@@ -311,12 +311,12 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
     return (
       <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-xl">
         <p className="mb-1 font-semibold text-foreground">Decile {d?.decile}</p>
-        <p className="text-blue-400">A/E Ratio: {d?.ae_ratio?.toFixed(3)}</p>
-        <p className="text-emerald-400">Lift: {d?.lift?.toFixed(3)}</p>
+        <p className="text-foreground/80">A/E Ratio: {d?.ae_ratio?.toFixed(3)}</p>
+        <p className="text-blue-400">Lift: {d?.lift?.toFixed(3)}</p>
         <p className="text-amber-400">Cumulative Lift: {d?.cumulative_lift?.toFixed(3)}</p>
         <p className="text-muted-foreground">Actual: {d?.actual?.toFixed(4)}</p>
         <p className="text-muted-foreground">Predicted: {d?.predicted?.toFixed(4)}</p>
-        <p className="text-muted-foreground/70">n = {d?.n?.toLocaleString()}</p>
+        <p className="text-muted-foreground">n = {d?.n?.toLocaleString()}</p>
       </div>
     );
   };
@@ -335,25 +335,25 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
             <XAxis
               dataKey="decile"
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
               tickLine={false}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.45)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
+              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
               tickLine={false}
             />
             <Tooltip content={renderTooltip} />
-            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.5)" }} />
-            <ReferenceLine y={1} stroke="rgba(255,255,255,0.2)" strokeDasharray="4 4" />
+            <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.7)" }} />
+            <ReferenceLine y={1} stroke="rgba(255,255,255,0.35)" strokeDasharray="4 4" />
             <Bar
               dataKey="ae_ratio"
               name="A/E Ratio"
-              fill="hsl(220 15% 40% / 0.35)"
+              fill="hsl(220 20% 45% / 0.5)"
               radius={[3, 3, 0, 0]}
               isAnimationActive={false}
             />
@@ -368,17 +368,17 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
             <Line
               dataKey="cumulative_lift"
               name="Cumulative Lift"
-              stroke="hsl(150 60% 50%)"
+              stroke="hsl(38 92% 56%)"
               strokeWidth={2}
               strokeDasharray="4 4"
-              dot={{ r: 3, fill: "hsl(150 60% 50%)" }}
+              dot={{ r: 3, fill: "hsl(38 92% 56%)" }}
               isAnimationActive={false}
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
       {liftChart.weak_deciles.length > 0 && (
-        <p className="mt-2 text-[0.6rem] text-amber-400/70">
+        <p className="mt-2 text-[0.6rem] text-amber-400">
           Weak separation in deciles: {liftChart.weak_deciles.join(", ")}
         </p>
       )}
@@ -477,7 +477,7 @@ function CoefficientTable({
                   {hasDiag && (
                     <td className={cn(
                       "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
-                      row.relativity != null && row.relativity > 1 ? "text-red-400/80" : row.relativity != null && row.relativity < 1 ? "text-emerald-400/80" : "text-foreground/60"
+                      row.relativity != null && row.relativity > 1 ? "text-red-400" : row.relativity != null && row.relativity < 1 ? "text-emerald-400" : "text-foreground/70"
                     )}>
                       {fmt(row.relativity ?? null, 4)}
                     </td>
@@ -497,7 +497,7 @@ function CoefficientTable({
                   )}
                   <td className={cn(
                     "px-4 py-2 text-right font-mono text-[0.75rem] font-bold",
-                    sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400/70" : sig.includes("*") ? "text-blue-400/60" : "text-muted-foreground/50"
+                    sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400" : sig.includes("*") ? "text-blue-400" : "text-muted-foreground"
                   )}>
                     {sig || ""}
                   </td>

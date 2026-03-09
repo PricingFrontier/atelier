@@ -1,60 +1,42 @@
 """Integration tests for /api/explore endpoint — real rustystats exploration."""
 
-import io
-
 import pytest
 
 
 @pytest.mark.asyncio
 class TestExploreEndpoint:
-    async def _upload(self, client, sample_csv_path) -> str:
-        """Helper: upload and return file_path."""
-        content = sample_csv_path.read_bytes()
-        resp = await client.post(
-            "/api/datasets/upload",
-            files={"file": ("test.csv", io.BytesIO(content), "text/csv")},
-        )
-        return resp.json()["file_path"]
-
-    async def test_basic_exploration(self, client, sample_csv_path):
-        path = await self._upload(client, sample_csv_path)
+    async def test_basic_exploration(self, client, uploaded_path):
         resp = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
         })
         assert resp.status_code == 200
         data = resp.json()
-        # Must have factor_stats
         assert "factor_stats" in data
         factor_names = {f["name"] for f in data["factor_stats"]}
-        # Response and exposure should be excluded from factors
         assert "ClaimNb" not in factor_names
         assert "Exposure" not in factor_names
-        # Other columns should be present as factors
         assert "Region" in factor_names
         assert "DrivAge" in factor_names
 
-    async def test_factor_stats_have_correct_types(self, client, sample_csv_path):
-        path = await self._upload(client, sample_csv_path)
+    async def test_factor_stats_have_correct_types(self, client, uploaded_path):
         resp = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
         })
         data = resp.json()
         stats_by_name = {f["name"]: f for f in data["factor_stats"]}
-        # Region is string → should be classified as categorical
         assert stats_by_name["Region"]["type"] == "categorical"
         assert "levels" in stats_by_name["Region"]
-        assert len(stats_by_name["Region"]["levels"]) == 6  # R11..R93
+        assert len(stats_by_name["Region"]["levels"]) == 6
 
-    async def test_categorical_levels_have_exposure(self, client, sample_csv_path):
-        path = await self._upload(client, sample_csv_path)
+    async def test_categorical_levels_have_exposure(self, client, uploaded_path):
         resp = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
@@ -68,38 +50,34 @@ class TestExploreEndpoint:
             assert level["count"] > 0
             assert "response_rate" in level
 
-    async def test_continuous_factors_have_bins(self, client, sample_csv_path):
-        path = await self._upload(client, sample_csv_path)
+    async def test_continuous_factors_have_bins(self, client, uploaded_path):
         resp = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
         })
         data = resp.json()
         stats_by_name = {f["name"]: f for f in data["factor_stats"]}
-        # DrivAge should have many unique values → continuous with bins
-        if "DrivAge" in stats_by_name and stats_by_name["DrivAge"]["type"] == "continuous":
-            assert "response_by_bin" in stats_by_name["DrivAge"]
-            bins = stats_by_name["DrivAge"]["response_by_bin"]
-            assert len(bins) > 0
-            for b in bins:
-                assert "bin_lower" in b
-                assert "bin_upper" in b
-                assert "response_rate" in b
+        assert "DrivAge" in stats_by_name, "DrivAge missing from factor stats"
+        assert stats_by_name["DrivAge"]["type"] == "continuous", (
+            f"DrivAge should be continuous, got {stats_by_name['DrivAge']['type']}"
+        )
+        bins = stats_by_name["DrivAge"]["response_by_bin"]
+        assert len(bins) > 1, "Continuous factor should have multiple bins"
+        for b in bins:
+            assert b["bin_lower"] < b["bin_upper"]
+            assert "response_rate" in b
 
-    async def test_split_filters_to_train_only(self, client, sample_csv_path):
-        path = await self._upload(client, sample_csv_path)
-        # Explore without split
+    async def test_split_filters_to_train_only(self, client, uploaded_path):
         resp_full = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
         })
-        # Explore with split (groups 1-3 = train)
         resp_split = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
@@ -110,15 +88,11 @@ class TestExploreEndpoint:
         })
         assert resp_full.status_code == 200
         assert resp_split.status_code == 200
-        full_data = resp_full.json()
-        split_data = resp_split.json()
-        # data_summary should show fewer rows when split
-        assert split_data["data_summary"]["n_rows"] < full_data["data_summary"]["n_rows"]
+        assert resp_split.json()["data_summary"]["n_rows"] < resp_full.json()["data_summary"]["n_rows"]
 
-    async def test_split_column_excluded_from_factors(self, client, sample_csv_path):
-        path = await self._upload(client, sample_csv_path)
+    async def test_split_column_excluded_from_factors(self, client, uploaded_path):
         resp = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
@@ -127,8 +101,7 @@ class TestExploreEndpoint:
                 "mapping": {"1": "train", "2": "train", "3": "train", "4": "validation", "5": "holdout"},
             },
         })
-        data = resp.json()
-        factor_names = {f["name"] for f in data["factor_stats"]}
+        factor_names = {f["name"] for f in resp.json()["factor_stats"]}
         assert "Group" not in factor_names
 
     async def test_nonexistent_dataset_fails(self, client):
@@ -139,10 +112,9 @@ class TestExploreEndpoint:
         })
         assert resp.status_code == 400
 
-    async def test_data_summary_present(self, client, sample_csv_path):
-        path = await self._upload(client, sample_csv_path)
+    async def test_data_summary_present(self, client, uploaded_path):
         resp = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
         })
@@ -152,11 +124,10 @@ class TestExploreEndpoint:
         assert summary["n_rows"] == 200
         assert summary["response_column"] == "ClaimNb"
 
-    async def test_null_diagnostics_present(self, client, sample_csv_path):
+    async def test_null_diagnostics_present(self, client, uploaded_path):
         """Exploration should fit a null model and return score tests for all factors."""
-        path = await self._upload(client, sample_csv_path)
         resp = await client.post("/api/explore", json={
-            "dataset_path": path,
+            "dataset_path": uploaded_path,
             "response": "ClaimNb",
             "family": "poisson",
             "offset": "Exposure",
@@ -165,10 +136,8 @@ class TestExploreEndpoint:
         data = resp.json()
         assert "null_diagnostics" in data
         assert data["null_diagnostics"] is not None
-        # Should have factors with score tests
         factors = data["null_diagnostics"]["factors"]
         assert len(factors) > 0
-        # Every factor from a null model should be unfitted and have a score_test
         for f in factors:
             assert f["in_model"] is False
             assert f["score_test"] is not None

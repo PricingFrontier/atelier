@@ -5,12 +5,15 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atelier.db.engine import get_session
 from atelier.db.models import Model, Project
 from atelier.schemas import ModelDetail, ModelSaveRequest, ModelSummary
 from atelier.schemas.model_save import SplitMetrics, VersionChange
+
+_MAX_VERSION_RETRIES = 5
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +22,13 @@ router = APIRouter(tags=["models"])
 
 @router.post("/models/save")
 async def save_model(req: ModelSaveRequest, session: AsyncSession = Depends(get_session)):
-    """Persist a fitted model as a new version within its project."""
+    """Persist a fitted model as a new version within its project.
+
+    Uses a retry loop to handle concurrent version increments: if two saves
+    race and both pick the same MAX(version)+1, the unique constraint on
+    (project_id, version) causes one to fail with IntegrityError.  The loser
+    rolls back, re-reads the current max, and retries.
+    """
     log.info(
         "[models/save] project_id=%s  response=%s  family=%s  n_terms=%d  "
         "deviance=%s  aic=%s  n_obs=%s  fit_ms=%s",
@@ -35,14 +44,6 @@ async def save_model(req: ModelSaveRequest, session: AsyncSession = Depends(get_
         log.warning("[models/save] project not found: %s", req.project_id)
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Determine next version number within this project
-    result = await session.execute(
-        select(func.coalesce(func.max(Model.version), 0)).where(
-            Model.project_id == req.project_id
-        )
-    )
-    next_version = result.scalar_one() + 1
-
     spec = {
         "dataset_path": req.dataset_path,
         "response": req.response,
@@ -54,45 +55,73 @@ async def save_model(req: ModelSaveRequest, session: AsyncSession = Depends(get_
         "split": req.split.model_dump() if req.split else None,
     }
 
-    model = Model(
-        project_id=req.project_id,
-        version=next_version,
-        name=f"v{next_version}",
-        spec=spec,
-        status="fitted",
-        deviance=req.deviance,
-        null_deviance=req.null_deviance,
-        aic=req.aic,
-        bic=req.bic,
-        n_obs=req.n_obs,
-        n_validation=req.n_validation,
-        n_params=req.n_params,
-        fit_duration_ms=req.fit_duration_ms,
-        summary_text=req.summary,
-        converged=req.converged,
-        iterations=req.iterations,
-        coef_table_json=json.dumps(req.coef_table) if req.coef_table else None,
-        diagnostics_json=json.dumps(req.diagnostics) if req.diagnostics else None,
-        generated_code=req.generated_code,
-    )
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_VERSION_RETRIES):
+        # Determine next version number within this project
+        result = await session.execute(
+            select(func.coalesce(func.max(Model.version), 0)).where(
+                Model.project_id == req.project_id
+            )
+        )
+        next_version = result.scalar_one() + 1
 
-    session.add(model)
+        model = Model(
+            project_id=req.project_id,
+            version=next_version,
+            name=f"v{next_version}",
+            spec=spec,
+            status="fitted",
+            deviance=req.deviance,
+            null_deviance=req.null_deviance,
+            aic=req.aic,
+            bic=req.bic,
+            n_obs=req.n_obs,
+            n_validation=req.n_validation,
+            n_params=req.n_params,
+            fit_duration_ms=req.fit_duration_ms,
+            summary_text=req.summary,
+            converged=req.converged,
+            iterations=req.iterations,
+            coef_table_json=json.dumps(req.coef_table) if req.coef_table else None,
+            diagnostics_json=json.dumps(req.diagnostics) if req.diagnostics else None,
+            generated_code=req.generated_code,
+        )
 
-    # Update project version count
-    project.n_versions = next_version
-    log.debug("[models/save] committing v%d to DB for project '%s'", next_version, project.name)
-    await session.commit()
-    await session.refresh(model)
+        session.add(model)
+        project.n_versions = next_version
 
-    log.info(
-        "[models/save] saved model v%d (id=%s) for project '%s' (id=%s)",
-        next_version, model.id, project.name, req.project_id,
-    )
+        try:
+            log.debug(
+                "[models/save] attempt %d: committing v%d for project '%s'",
+                attempt + 1, next_version, project.name,
+            )
+            await session.commit()
+            await session.refresh(model)
+            log.info(
+                "[models/save] saved model v%d (id=%s) for project '%s' (id=%s)",
+                next_version, model.id, project.name, req.project_id,
+            )
+            return {
+                "id": model.id,
+                "version": next_version,
+            }
+        except IntegrityError as exc:
+            last_exc = exc
+            log.warning(
+                "[models/save] version conflict on v%d (attempt %d), retrying",
+                next_version, attempt + 1,
+            )
+            await session.rollback()
+            # Re-fetch project after rollback so it's attached to the session
+            project = await session.get(Project, req.project_id)
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
 
-    return {
-        "id": model.id,
-        "version": next_version,
-    }
+    log.error("[models/save] exhausted %d retries for project %s", _MAX_VERSION_RETRIES, req.project_id)
+    raise HTTPException(
+        status_code=409,
+        detail=f"Version conflict after {_MAX_VERSION_RETRIES} retries",
+    ) from last_exc
 
 
 def _term_key(t: dict) -> str:
