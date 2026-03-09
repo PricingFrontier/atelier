@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, type ChangeEvent } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, memo, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -100,34 +100,39 @@ export default function ModelConfigPage() {
   const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
   const [validating, setValidating] = useState(false);
 
-  // Run data quality validation when response + family (+ offset/weights) change
+  // Run data quality validation when response + family (+ offset/weights) change (debounced)
   useEffect(() => {
     if (!datasetPath || !response || !family) {
       setValidationErrors([]);
       setValidationWarnings([]);
       return;
     }
-    log.info(TAG, `validating data quality: response=${response} family=${family} offset=${offset} weights=${weights}`);
-    setValidating(true);
-    setDismissedWarnings(new Set());
-    apiPost<{ errors: typeof validationErrors; warnings: typeof validationWarnings }>("/datasets/validate", {
-      dataset_path: datasetPath,
-      response,
-      family,
-      offset: offset ?? undefined,
-      weights: weights ?? undefined,
-    })
-      .then((data) => {
-        log.info(TAG, `validation result: ${data.errors.length} errors, ${data.warnings.length} warnings`);
-        setValidationErrors(data.errors);
-        setValidationWarnings(data.warnings);
-      })
-      .catch((err) => {
-        log.error(TAG, "validation call failed", err);
-        setValidationErrors([]);
-        setValidationWarnings([]);
-      })
-      .finally(() => setValidating(false));
+    const ac = new AbortController();
+    const timer = setTimeout(() => {
+      log.info(TAG, `validating data quality: response=${response} family=${family} offset=${offset} weights=${weights}`);
+      setValidating(true);
+      setDismissedWarnings(new Set());
+      apiPost<{ errors: typeof validationErrors; warnings: typeof validationWarnings }>("/datasets/validate", {
+        dataset_path: datasetPath,
+        response,
+        family,
+        offset: offset ?? undefined,
+        weights: weights ?? undefined,
+      }, ac.signal)
+        .then((data) => {
+          log.info(TAG, `validation result: ${data.errors.length} errors, ${data.warnings.length} warnings`);
+          setValidationErrors(data.errors);
+          setValidationWarnings(data.warnings);
+        })
+        .catch((err) => {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          log.error(TAG, "validation call failed", err);
+          setValidationErrors([]);
+          setValidationWarnings([]);
+        })
+        .finally(() => setValidating(false));
+    }, 400);
+    return () => { clearTimeout(timer); ac.abort(); };
   }, [datasetPath, response, family, offset, weights]);
 
   // Fetch unique values when split column changes
@@ -156,9 +161,31 @@ export default function ModelConfigPage() {
   }, [splitColumn, datasetPath]);
 
   // Derived
-  const numericCols = columns.filter((c) => c.is_numeric);
+  const numericCols = useMemo(() => columns.filter((c) => c.is_numeric), [columns]);
   const canonicalLink = family ? CANONICAL_LINKS[family] : null;
   const effectiveLink = link ?? canonicalLink;
+
+  // Memoized options for SelectDropdown (avoids defeating React.memo with new array refs)
+  const numericColOptions = useMemo(
+    () => numericCols.map((c) => ({ value: c.name, label: c.name, badge: c.dtype })),
+    [numericCols],
+  );
+  const familyOptions = useMemo(
+    () => FAMILY_OPTIONS.map((f) => ({ value: f.value, label: f.label, description: f.description })),
+    [],
+  );
+  const linkOptions = useMemo(
+    () => LINK_OPTIONS.map((l) => ({ value: l.value, label: l.label })),
+    [],
+  );
+  const offsetWeightOptions = useMemo(
+    () => numericCols.filter((c) => c.name !== response).map((c) => ({ value: c.name, label: c.name })),
+    [numericCols, response],
+  );
+  const splitColumnOptions = useMemo(
+    () => columns.filter((c) => c.name !== response && c.n_unique <= 20).map((c) => ({ value: c.name, label: c.name, badge: `${c.n_unique} values` })),
+    [columns, response],
+  );
 
   const handleFile = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -413,11 +440,7 @@ export default function ModelConfigPage() {
                   value={response}
                   onChange={setResponse}
                   placeholder="Select response column"
-                  options={numericCols.map((c) => ({
-                    value: c.name,
-                    label: c.name,
-                    badge: c.dtype,
-                  }))}
+                  options={numericColOptions}
                 />
               </GlassCard>
             </AnimatedSection>
@@ -439,11 +462,7 @@ export default function ModelConfigPage() {
                       value={family}
                       onChange={(v) => handleFamilyChange(v as Family)}
                       placeholder="Select family"
-                      options={FAMILY_OPTIONS.map((f) => ({
-                        value: f.value,
-                        label: f.label,
-                        description: f.description,
-                      }))}
+                      options={familyOptions}
                     />
                   </div>
                   <div>
@@ -459,10 +478,7 @@ export default function ModelConfigPage() {
                       value={effectiveLink}
                       onChange={(v) => setLink(v === canonicalLink ? null : (v as Link))}
                       placeholder="Select family first"
-                      options={LINK_OPTIONS.map((l) => ({
-                        value: l.value,
-                        label: l.label,
-                      }))}
+                      options={linkOptions}
                     />
                   </div>
                 </div>
@@ -487,9 +503,7 @@ export default function ModelConfigPage() {
                       onChange={setOffset}
                       placeholder="None"
                       allowNone
-                      options={numericCols
-                        .filter((c) => c.name !== response)
-                        .map((c) => ({ value: c.name, label: c.name }))}
+                      options={offsetWeightOptions}
                     />
                   </div>
                   <div>
@@ -501,9 +515,7 @@ export default function ModelConfigPage() {
                       onChange={setWeights}
                       placeholder="None"
                       allowNone
-                      options={numericCols
-                        .filter((c) => c.name !== response)
-                        .map((c) => ({ value: c.name, label: c.name }))}
+                      options={offsetWeightOptions}
                     />
                   </div>
                 </div>
@@ -528,9 +540,7 @@ export default function ModelConfigPage() {
                       onChange={(v) => setSplitColumn(v)}
                       placeholder="None"
                       allowNone
-                      options={columns
-                        .filter((c) => c.name !== response && c.n_unique <= 20)
-                        .map((c) => ({ value: c.name, label: c.name, badge: `${c.n_unique} values` }))}
+                      options={splitColumnOptions}
                     />
                   </div>
 
@@ -704,11 +714,11 @@ interface SelectOption {
   description?: string;
 }
 
-function SelectDropdown({
+const SelectDropdown = memo(function SelectDropdown({
   value,
   onChange,
   options,
-  placeholder = "Select…",
+  placeholder = "Select\u2026",
   allowNone = false,
 }: {
   value: string | null;
@@ -806,4 +816,4 @@ function SelectDropdown({
       )}
     </div>
   );
-}
+});

@@ -81,6 +81,26 @@ body {
   to { opacity: 1; transform: translateX(0); }
 }
 
+/* Staggered animation delays */
+.fade-up-stagger-1 { animation: fadeUp 0.3s ease-out 0.03s both; }
+.fade-up-stagger-2 { animation: fadeUp 0.3s ease-out 0.06s both; }
+.fade-up-stagger-3 { animation: fadeUp 0.3s ease-out 0.09s both; }
+.fade-up-stagger-4 { animation: fadeUp 0.3s ease-out 0.12s both; }
+.fade-up-stagger-5 { animation: fadeUp 0.3s ease-out 0.15s both; }
+.fade-up-stagger-6 { animation: fadeUp 0.3s ease-out 0.18s both; }
+.fade-up-stagger-7 { animation: fadeUp 0.3s ease-out 0.21s both; }
+.fade-up-stagger-8 { animation: fadeUp 0.3s ease-out 0.24s both; }
+.fade-up-stagger-9 { animation: fadeUp 0.3s ease-out 0.27s both; }
+.fade-up-stagger-10 { animation: fadeUp 0.3s ease-out 0.30s both; }
+.fade-up-stagger-11 { animation: fadeUp 0.3s ease-out 0.33s both; }
+.fade-up-stagger-12 { animation: fadeUp 0.3s ease-out 0.36s both; }
+.fade-up-stagger-13 { animation: fadeUp 0.3s ease-out 0.39s both; }
+.fade-up-stagger-14 { animation: fadeUp 0.3s ease-out 0.42s both; }
+.fade-up-stagger-15 { animation: fadeUp 0.3s ease-out 0.45s both; }
+
+/* Coefficient row animation (no per-row delay) */
+.fade-up-coeff { animation: fadeUp 0.2s ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.01ms !important;

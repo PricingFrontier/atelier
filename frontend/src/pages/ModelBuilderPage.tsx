@@ -1,20 +1,12 @@
-import { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
-  Search,
-  Hash,
-  Type,
-  Columns3,
   Settings2,
-  X,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Play,
   Loader2,
   AlertTriangle,
   BarChart3,
+  Columns3,
   TableProperties,
   Code2,
   Copy,
@@ -31,14 +23,14 @@ import type {
   TermType,
   MainTab,
   ModelSummary,
-  SplitMetrics,
-  MenuPos,
-  MenuItem,
   ExplorationData,
   FitResult,
-  FactorDiagnostic,
 } from "@/types";
-import { TERM_COLORS } from "@/types";
+import type { FactorBadge } from "@/components/FactorSidebar";
+import FactorSidebar from "@/components/FactorSidebar";
+import HistoryPanel from "@/components/HistoryPanel";
+import FittingOverlay from "@/components/FittingOverlay";
+
 const FactorChartsPanel = lazy(() => import("@/components/charts/FactorChartsPanel"));
 const ModelPanel = lazy(() => import("@/components/ModelPanel"));
 const DataPanel = lazy(() => import("@/components/DataPanel"));
@@ -50,7 +42,6 @@ function TabFallback() {
     </div>
   );
 }
-import ContextMenu from "@/components/ui/ContextMenu";
 import PageBackground from "@/components/ui/PageBackground";
 
 /** Convert a model detail response into terms array + optional FitResult. */
@@ -114,7 +105,6 @@ export default function ModelBuilderPage() {
   const configRef = useRef(config);
   configRef.current = config;
 
-  const [search, setSearch] = useState("");
   const [terms, setTerms] = useState<TermSpec[]>([]);
 
   // Exploration state (run once on mount)
@@ -153,16 +143,38 @@ export default function ModelBuilderPage() {
   // On mount: fetch history, then restore latest version (terms + fit result)
   useEffect(() => {
     if (!config?.projectId) return;
+    const cfg = configRef.current;
+    const ac = new AbortController();
     log.info(TAG, `mount — restoring latest model for project ${config.projectId}`);
-    let cancelled = false;
 
     (async () => {
       setRestoring(true);
+      if (cfg?.datasetPath) setExplorationLoading(true);
       try {
-        const hist = await apiGet<ModelSummary[]>(`/models/${config.projectId}/history`);
-        if (cancelled) return;
+        // Kick off history + exploration in parallel
+        const historyP = apiGet<ModelSummary[]>(`/models/${config.projectId}/history`, ac.signal);
+        const explorationP = cfg?.datasetPath
+          ? apiPost<ExplorationData>("/explore", {
+              dataset_path: cfg.datasetPath,
+              response: cfg.response,
+              family: cfg.family,
+              offset: cfg.offset ?? undefined,
+              split: cfg.split ?? undefined,
+              project_id: cfg.projectId ?? undefined,
+            }, ac.signal)
+          : null;
+
+        const [hist, expData] = await Promise.all([historyP, explorationP]);
+        if (ac.signal.aborted) return;
+
         log.info(TAG, `restore: got ${hist.length} history entries`);
         setHistory(hist);
+
+        if (expData) {
+          log.info(TAG, `exploration complete — keys=${Object.keys(expData).join(",")}`);
+          setExploration(expData);
+        }
+        setExplorationLoading(false);
 
         if (hist.length === 0) {
           log.info(TAG, "restore: no history — starting fresh");
@@ -170,62 +182,30 @@ export default function ModelBuilderPage() {
         }
 
         log.info(TAG, `restore: loading latest model id=${hist[0].id}`);
-        const model = await apiGet<any>(`/models/detail/${hist[0].id}`);
-        if (cancelled) return;
+        const model = await apiGet<any>(`/models/detail/${hist[0].id}`, ac.signal);
+        if (ac.signal.aborted) return;
 
         const hydrated = hydrateModel(model);
         log.info(TAG, `restore: hydrated v${hydrated.version} with ${hydrated.terms.length} terms  hasFitResult=${!!hydrated.fitResult}`);
         setTerms(hydrated.terms);
         setCurrentVersion(hydrated.version);
         setFitResult(hydrated.fitResult);
-      } catch (err) { log.error(TAG, "restore FAILED", err); }
-      finally { if (!cancelled) setRestoring(false); }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        log.error(TAG, "restore FAILED", err);
+        if (!ac.signal.aborted) {
+          setExplorationLoading(false);
+          if (err instanceof Error) {
+            setExplorationError(err.message || "Data exploration failed");
+          }
+        }
+      }
+      finally { if (!ac.signal.aborted) setRestoring(false); }
     })();
 
-    return () => { cancelled = true; };
-  }, [config?.projectId]);
-
-  // Context menu state
-  const [menuPos, setMenuPos] = useState<MenuPos | null>(null);
-  const [menuCol, setMenuCol] = useState<ColumnMeta | null>(null);
-  const [submenuKey, setSubmenuKey] = useState<string | null>(null);
-
-  // Fetch exploration data on mount (keyed on stable fields, not config object ref)
-  useEffect(() => {
-    const cfg = configRef.current;
-    if (!cfg?.datasetPath) return;
-    log.info(TAG, `mount — running exploration  dataset=${cfg.datasetPath}  response=${cfg.response}  family=${cfg.family}`);
-    setExplorationLoading(true);
-    apiPost<ExplorationData>("/explore", {
-      dataset_path: cfg.datasetPath,
-      response: cfg.response,
-      family: cfg.family,
-      offset: cfg.offset ?? undefined,
-      split: cfg.split ?? undefined,
-      project_id: cfg.projectId ?? undefined,
-    })
-      .then((data) => {
-        log.info(TAG, `exploration complete — keys=${Object.keys(data).join(",")}`);
-        setExploration(data);
-        fetchHistory();
-      })
-      .catch((err) => {
-        log.error(TAG, "exploration FAILED", err);
-        setExplorationError(err.message || "Data exploration failed");
-      })
-      .finally(() => setExplorationLoading(false));
+    return () => { ac.abort(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config?.datasetPath, config?.response, config?.family]);
-
-  // Close menu on click outside or Escape
-  useEffect(() => {
-    if (!menuPos) return;
-    const close = () => { setMenuPos(null); setMenuCol(null); setSubmenuKey(null); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
-    window.addEventListener("click", close);
-    window.addEventListener("keydown", onKey);
-    return () => { window.removeEventListener("click", close); window.removeEventListener("keydown", onKey); };
-  }, [menuPos]);
+  }, [config?.projectId, config?.datasetPath, config?.response, config?.family]);
 
   const availableFactors = useMemo(() => {
     if (!config) return [];
@@ -234,20 +214,6 @@ export default function ModelBuilderPage() {
     );
     return config.columns.filter((c) => !reserved.has(c.name));
   }, [config]);
-
-  const filteredFactors = useMemo(
-    () => availableFactors.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
-    [availableFactors, search]
-  );
-
-  const { numericCount, categoricalCount } = useMemo(() => {
-    let num = 0, cat = 0;
-    for (const c of availableFactors) {
-      if (c.is_numeric) num++;
-      if (c.is_categorical) cat++;
-    }
-    return { numericCount: num, categoricalCount: cat };
-  }, [availableFactors]);
 
   const factorBadgeMap = useMemo(() => {
     const map = new Map<string, FactorBadge>();
@@ -290,9 +256,6 @@ export default function ModelBuilderPage() {
       log.debug(TAG, `addTerm: appending new term (total will be ${prev.length + 1})`);
       return [...prev, spec];
     });
-    setMenuPos(null);
-    setMenuCol(null);
-    setSubmenuKey(null);
   }, []);
 
   const removeTerm = useCallback((col: string, type: TermType, expr?: string) => {
@@ -309,20 +272,6 @@ export default function ModelBuilderPage() {
     }
     return map;
   }, [terms]);
-
-  const sortedFactors = useMemo(() => {
-    return [...filteredFactors].sort((a, b) => {
-      const ba = factorBadgeMap.get(a.name);
-      const bb = factorBadgeMap.get(b.name);
-      const aFitted = ba?.devPct != null ? 1 : 0;
-      const bFitted = bb?.devPct != null ? 1 : 0;
-      if (aFitted !== bFitted) return bFitted - aFitted;
-      if (aFitted && bFitted) return (bb!.devPct! - ba!.devPct!);
-      const aExp = ba?.expectedPct ?? 0;
-      const bExp = bb?.expectedPct ?? 0;
-      return bExp - aExp;
-    });
-  }, [filteredFactors, factorBadgeMap]);
 
   const handleFit = useCallback(async () => {
     if (!config?.datasetPath || terms.length === 0) return;
@@ -387,7 +336,7 @@ export default function ModelBuilderPage() {
     } finally {
       setFitting(false);
     }
-  }, [config, terms]);
+  }, [config, terms, fetchHistory]);
 
   const handleRestoreVersion = useCallback(async (modelId: string) => {
     log.info(TAG, `restoreVersion: modelId=${modelId}`);
@@ -408,129 +357,6 @@ export default function ModelBuilderPage() {
     setSelectedFactor((prev) => prev === col.name ? null : col.name);
     setActiveTab("charts");
   }, []);
-
-  const handleContextMenu = useCallback((e: React.MouseEvent, col: ColumnMeta) => {
-    e.preventDefault();
-    e.stopPropagation();
-    log.debug(TAG, `contextMenu: ${col.name}  at (${e.clientX}, ${e.clientY})`);
-    setMenuPos({ x: e.clientX, y: e.clientY });
-    setMenuCol(col);
-    setSubmenuKey(null);
-  }, []);
-
-  // Build menu items based on column type
-  const menuItems = useMemo((): MenuItem[] => {
-    if (!menuCol) return [];
-    const col = menuCol;
-
-    if (col.is_categorical) {
-      return [
-        {
-          label: "Category",
-          description: `Dummy encoding (${col.n_unique} levels)`,
-          action: () => addTerm({ column: col.name, type: "categorical", label: `${col.name} [Cat]` }),
-        },
-        {
-          label: "Target Encoding",
-          description: "Regularized ordered TE",
-          action: () => addTerm({ column: col.name, type: "target_encoding", label: `${col.name} [TE]` }),
-        },
-        {
-          label: "Frequency Encoding",
-          description: "Proportion-based encoding",
-          action: () => addTerm({ column: col.name, type: "frequency_encoding", label: `${col.name} [FE]` }),
-        },
-      ];
-    }
-
-    // Numeric column
-    return [
-      {
-        label: "Linear",
-        description: "Raw continuous variable",
-        submenu: [
-          {
-            label: "Unconstrained",
-            icon: <Minus className="h-3 w-3" />,
-            action: () => addTerm({ column: col.name, type: "linear", label: `${col.name} [Lin]` }),
-          },
-          {
-            label: "Monotone increasing",
-            icon: <TrendingUp className="h-3 w-3" />,
-            action: () => addTerm({ column: col.name, type: "linear", monotonicity: "increasing", label: `${col.name} [Lin ↑]` }),
-          },
-          {
-            label: "Monotone decreasing",
-            icon: <TrendingDown className="h-3 w-3" />,
-            action: () => addTerm({ column: col.name, type: "linear", monotonicity: "decreasing", label: `${col.name} [Lin ↓]` }),
-          },
-        ],
-      },
-      {
-        label: "Quadratic",
-        description: `${col.name}²`,
-        action: () => addTerm({ column: col.name, type: "expression", expr: `${col.name} ** 2`, label: `${col.name}² [Expr]` }),
-      },
-      { separator: true, label: "" },
-      {
-        label: "B-Spline",
-        description: "Flexible smooth curve",
-        submenu: [
-          {
-            label: "Auto-tuned (penalized)",
-            description: "GCV selects smoothing",
-            action: () => addTerm({ column: col.name, type: "bs", label: `${col.name} [BS auto]` }),
-          },
-          {
-            label: "Fixed df = 3",
-            action: () => addTerm({ column: col.name, type: "bs", df: 3, label: `${col.name} [BS df=3]` }),
-          },
-          {
-            label: "Fixed df = 5",
-            action: () => addTerm({ column: col.name, type: "bs", df: 5, label: `${col.name} [BS df=5]` }),
-          },
-          {
-            label: "Fixed df = 7",
-            action: () => addTerm({ column: col.name, type: "bs", df: 7, label: `${col.name} [BS df=7]` }),
-          },
-          { separator: true, label: "" },
-          {
-            label: "Monotone increasing",
-            icon: <TrendingUp className="h-3 w-3" />,
-            action: () => addTerm({ column: col.name, type: "bs", monotonicity: "increasing", label: `${col.name} [BS ↑]` }),
-          },
-          {
-            label: "Monotone decreasing",
-            icon: <TrendingDown className="h-3 w-3" />,
-            action: () => addTerm({ column: col.name, type: "bs", monotonicity: "decreasing", label: `${col.name} [BS ↓]` }),
-          },
-        ],
-      },
-      {
-        label: "Natural Spline",
-        description: "Linear beyond boundaries",
-        submenu: [
-          {
-            label: "Auto-tuned (penalized)",
-            description: "GCV selects smoothing",
-            action: () => addTerm({ column: col.name, type: "ns", label: `${col.name} [NS auto]` }),
-          },
-          {
-            label: "Fixed df = 3",
-            action: () => addTerm({ column: col.name, type: "ns", df: 3, label: `${col.name} [NS df=3]` }),
-          },
-          {
-            label: "Fixed df = 5",
-            action: () => addTerm({ column: col.name, type: "ns", df: 5, label: `${col.name} [NS df=5]` }),
-          },
-          {
-            label: "Fixed df = 7",
-            action: () => addTerm({ column: col.name, type: "ns", df: 7, label: `${col.name} [NS df=7]` }),
-          },
-        ],
-      },
-    ];
-  }, [menuCol, addTerm]);
 
   if (!config) {
     log.warn(TAG, "no config in location.state — redirecting to /new");
@@ -587,91 +413,18 @@ export default function ModelBuilderPage() {
 
       <div className="relative z-10 flex flex-1 overflow-hidden">
         {/* Left sidebar — Available Factors */}
-        <aside
-          className="flex w-72 shrink-0 flex-col border-r border-border bg-surface"
-          style={{ animation: "fadeUp 0.5s ease-out both" }}
-        >
-          {/* Fit button */}
-          <div className="border-b border-border px-3 py-3">
-            <button
-              disabled={terms.length === 0 || fitting}
-              onClick={handleFit}
-              className={cn(
-                "relative flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors",
-                terms.length > 0
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98]"
-                  : "bg-secondary text-muted-foreground/50"
-              )}
-            >
-              {fitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              {fitting ? "Fitting…" : "Fit Model"}
-              {terms.length > 0 && (
-                <span className="ml-1 rounded-full bg-white/20 px-1.5 py-0.5 text-[0.6rem] leading-none">
-                  {terms.length}
-                </span>
-              )}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Columns3 className="h-4 w-4 text-primary/70" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Factors
-              </span>
-            </div>
-            <span className="text-[0.65rem] text-muted-foreground">
-              {availableFactors.length} available
-            </span>
-          </div>
-
-          <div className="px-3 py-2">
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 transition-colors focus-within:border-primary/30 focus-within:bg-surface-hover">
-              <Search className="h-3.5 w-3.5 text-muted-foreground/60" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search columns…"
-                className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 border-b border-border px-4 pb-2.5">
-            <span className="flex items-center gap-1 text-[0.65rem] text-muted-foreground">
-              <Hash className="h-3 w-3 text-blue-400/60" />
-              {numericCount} numeric
-            </span>
-            <span className="flex items-center gap-1 text-[0.65rem] text-muted-foreground">
-              <Type className="h-3 w-3 text-violet-400/60" />
-              {categoricalCount} categorical
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-2 py-2">
-            {sortedFactors.length === 0 ? (
-              <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-                {search ? "No matching columns" : "No factors available"}
-              </p>
-            ) : (
-              <div className="space-y-0.5">
-                {sortedFactors.map((col, i) => (
-                  <FactorRow
-                    key={col.name}
-                    col={col}
-                    index={i}
-                    colTerms={termsMap.get(col.name)}
-                    badge={factorBadgeMap.get(col.name)}
-                    isSelected={selectedFactor === col.name}
-                    onFactorClick={handleFactorClick}
-                    onContextMenu={handleContextMenu}
-                    onRemoveTerm={removeTerm}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
+        <FactorSidebar
+          availableFactors={availableFactors}
+          terms={terms}
+          termsMap={termsMap}
+          factorBadgeMap={factorBadgeMap}
+          selectedFactor={selectedFactor}
+          fitting={fitting}
+          onFactorClick={handleFactorClick}
+          onAddTerm={addTerm}
+          onRemoveTerm={removeTerm}
+          onFit={handleFit}
+        />
 
         {/* Main content area */}
         <main className="flex flex-1 flex-col overflow-hidden">
@@ -720,66 +473,7 @@ export default function ModelBuilderPage() {
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {explorationLoading && !exploration ? (
-              <div className="flex flex-1 items-center justify-center p-6 h-full">
-                <div className="flex flex-col items-center gap-8" style={{ animation: "fadeUp 0.6s ease-out both" }}>
-                  {/* Animated rings */}
-                  <div className="relative flex h-24 w-24 items-center justify-center">
-                    <div
-                      className="absolute inset-0 rounded-full border border-primary/20"
-                      style={{ animation: "pulseRing 2.4s ease-out infinite" }}
-                    />
-                    <div
-                      className="absolute inset-[-8px] rounded-full border border-primary/10"
-                      style={{ animation: "pulseRing 2.4s ease-out 0.6s infinite" }}
-                    />
-                    <div
-                      className="absolute inset-[-16px] rounded-full border border-primary/5"
-                      style={{ animation: "pulseRing 2.4s ease-out 1.2s infinite" }}
-                    />
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/[0.08]">
-                      <div
-                        className="text-primary"
-                        style={{ animation: "gentlePulse 2s ease-in-out infinite" }}
-                      >
-                        <BarChart3 className="h-7 w-7" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Text */}
-                  <div className="flex flex-col items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground/80">
-                      Initialising project
-                    </p>
-                    <p className="text-xs text-muted-foreground/40 text-center max-w-[240px]">
-                      Analysing dataset, computing factor statistics &amp; fitting null model
-                    </p>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="w-48 overflow-hidden rounded-full bg-secondary">
-                    <div className="h-[3px] w-1/3 rounded-full bg-gradient-to-r from-transparent via-primary/60 to-transparent"
-                      style={{ animation: "progressSlide 1.8s ease-in-out infinite" }}
-                    />
-                  </div>
-
-                  {/* Steps */}
-                  <div className="flex flex-col gap-2">
-                    {["Loading & splitting data", "Computing univariate statistics", "Fitting null model & diagnostics"].map((step, i) => (
-                      <div
-                        key={step}
-                        className="flex items-center gap-2.5"
-                        style={{ animation: `stepReveal 0.4s ease-out ${0.3 + i * 0.2}s both` }}
-                      >
-                        <div className="flex h-4 w-4 items-center justify-center">
-                          <Loader2 className="h-3 w-3 animate-spin text-primary/50" />
-                        </div>
-                        <span className="text-[0.7rem] text-muted-foreground/40">{step}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <FittingOverlay />
             ) : activeTab === "code" && config ? (
               <CodePanel config={config} terms={terms} />
             ) : activeTab === "data" && exploration ? (
@@ -858,168 +552,11 @@ export default function ModelBuilderPage() {
           </div>
         </main>
       </div>
-
-      {/* Context menu */}
-      {menuPos && menuCol && (
-        <ContextMenu
-          pos={menuPos}
-          items={menuItems}
-          submenuKey={submenuKey}
-          onSubmenu={setSubmenuKey}
-        />
-      )}
     </div>
   );
 }
 
-/* ---- Memoized Factor Row ---- */
-
-type FactorBadge = {
-  diag: FactorDiagnostic;
-  devPct?: number;
-  relImportance?: number;
-  expectedPct?: number;
-};
-
-const FactorRow = memo(function FactorRow({
-  col,
-  index,
-  colTerms,
-  badge: fb,
-  isSelected,
-  onFactorClick,
-  onContextMenu,
-  onRemoveTerm,
-}: {
-  col: ColumnMeta;
-  index: number;
-  colTerms: TermSpec[] | undefined;
-  badge: FactorBadge | undefined;
-  isSelected: boolean;
-  onFactorClick: (col: ColumnMeta) => void;
-  onContextMenu: (e: React.MouseEvent, col: ColumnMeta) => void;
-  onRemoveTerm: (col: string, type: TermType, expr?: string) => void;
-}) {
-  const hasTerms = colTerms && colTerms.length > 0;
-  return (
-    <div key={col.name} style={index < 15 ? { animation: `fadeUp 0.3s ease-out ${0.03 * index}s both` } : undefined}>
-      {/* Factor row */}
-      <div
-        onClick={() => onFactorClick(col)}
-        onContextMenu={(e) => onContextMenu(e, col)}
-        className={cn(
-          "group flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-surface-hover cursor-pointer",
-          hasTerms && "bg-surface",
-          isSelected && "!bg-primary/10 ring-1 ring-primary/30"
-        )}
-      >
-        <div
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors",
-            col.is_categorical
-              ? "bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/20"
-              : "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20"
-          )}
-        >
-          {col.is_categorical ? <Type className="h-3.5 w-3.5" /> : <Hash className="h-3.5 w-3.5" />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground/80 group-hover:text-foreground">
-            {col.name}
-          </p>
-          <p className="text-[0.6rem] text-muted-foreground/40">
-            {col.dtype} &middot; {col.n_unique} unique
-            {col.n_missing > 0 && (
-              <span className="text-amber-400/60"> &middot; {col.n_missing} missing</span>
-            )}
-          </p>
-        </div>
-        <FactorBadgeDisplay fb={fb} />
-      </div>
-
-      {/* Fitted terms for this factor */}
-      {hasTerms && (
-        <div className="ml-9 space-y-0.5 pb-1 pt-0.5">
-          {colTerms.map((term) => {
-            const color = TERM_COLORS[term.type];
-            return (
-              <div
-                key={`${term.type}-${term.expr ?? ""}-${term.df ?? ""}-${term.monotonicity ?? ""}`}
-                className="group/term flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-surface-hover"
-                style={{ animation: "fadeUp 0.2s ease-out both" }}
-              >
-                <span className={cn("rounded px-1.5 py-0.5 text-[0.6rem] font-semibold leading-none", color.bg, color.text)}>
-                  {color.label}
-                </span>
-                <span className="flex-1 truncate text-[0.7rem] text-foreground/60">
-                  {term.type === "expression" ? term.expr : term.type.replace("_", " ")}
-                  {term.monotonicity && (
-                    <span className="ml-1 text-muted-foreground/40">
-                      {term.monotonicity === "increasing" ? "↑" : "↓"}
-                    </span>
-                  )}
-                  {term.df != null && (
-                    <span className="ml-1 text-muted-foreground/40">df={term.df}</span>
-                  )}
-                </span>
-                <button
-                  onClick={() => onRemoveTerm(term.column, term.type, term.expr)}
-                  className="rounded p-0.5 text-muted-foreground/0 transition-colors group-hover/term:text-muted-foreground/30 hover:!text-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-});
-
-function FactorBadgeDisplay({ fb }: { fb: FactorBadge | undefined }) {
-  if (fb?.diag.score_test) {
-    const st = fb.diag.score_test;
-    const ep = fb.expectedPct;
-    return (
-      <span
-        className={cn(
-          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.6rem] font-semibold tabular-nums",
-          st.significant && ep != null && ep >= 0.5 ? "bg-emerald-500/15 text-emerald-400"
-            : st.significant ? "bg-emerald-500/8 text-emerald-400/60"
-            : "bg-secondary text-muted-foreground/50"
-        )}
-        title={`Score test: χ²=${st.statistic.toFixed(1)}, df=${st.df}, p=${st.pvalue < 0.0001 ? "<0.0001" : st.pvalue.toFixed(4)}`}
-      >
-        {st.significant && ep != null
-          ? ep >= 0.1 ? `~${ep.toFixed(1)}%` : `~${ep.toFixed(2)}%`
-          : "ns"}
-      </span>
-    );
-  }
-  if (fb?.devPct != null) {
-    return (
-      <span
-        className={cn(
-          "shrink-0 rounded-md px-1.5 py-0.5 text-[0.6rem] font-semibold tabular-nums",
-          fb.devPct >= 1 ? "bg-blue-500/15 text-blue-400"
-            : fb.devPct >= 0.1 ? "bg-blue-500/10 text-blue-400/70"
-            : "bg-secondary text-muted-foreground/50"
-        )}
-        title={`Deviance reduction: ${fb.devPct.toFixed(2)}%${fb.relImportance != null ? ` · Relative importance: ${fb.relImportance.toFixed(1)}%` : ""}${fb.diag.significance?.dev_contrib != null ? ` (Δdev=${fb.diag.significance.dev_contrib.toFixed(1)})` : ""}`}
-      >
-        {fb.devPct >= 0.1 ? `${fb.devPct.toFixed(1)}%` : `${fb.devPct.toFixed(2)}%`}
-      </span>
-    );
-  }
-  return (
-    <span className="text-[0.6rem] text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/30">
-      right-click
-    </span>
-  );
-}
-
-/* ---- Context Menu ---- */
+/* ---- Code generation panel ---- */
 
 function generateRustystatsCode(config: ModelConfig, terms: TermSpec[]): string {
   const lines: string[] = [
@@ -1133,195 +670,6 @@ function CodePanel({ config, terms }: { config: ModelConfig; terms: TermSpec[] }
           <code>{code}</code>
         </pre>
       </div>
-    </div>
-  );
-}
-
-function HistoryPanel({
-  history,
-  loading,
-  currentVersion,
-  onRestore,
-  restoring: isRestoring,
-}: {
-  history: ModelSummary[];
-  loading: boolean;
-  currentVersion: number | null;
-  onRestore: (modelId: string) => void;
-  restoring: boolean;
-}) {
-  return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ animation: "fadeUp 0.4s ease-out both" }}>
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
-          <Clock className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">Version History</p>
-          <p className="text-[0.7rem] text-muted-foreground/50">
-            {history.length} saved version{history.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
-        </div>
-      ) : history.length === 0 ? (
-        <div className="py-12 text-center text-sm text-muted-foreground/40">
-          No models saved yet. Fit a model to create the first version.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {history.map((m, i) => {
-            const isCurrent = m.version === currentVersion;
-            return (
-              <div
-                key={m.id}
-                className={cn(
-                  "rounded-xl border p-4 transition-colors",
-                  isCurrent
-                    ? "border-primary/30 bg-primary/[0.04]"
-                    : "border-border bg-card hover:bg-surface-hover"
-                )}
-                style={{ animation: `fadeUp 0.3s ease-out ${0.03 * i}s both` }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold",
-                      isCurrent ? "bg-primary/15 text-primary" : "bg-accent text-muted-foreground"
-                    )}>
-                      v{m.version}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground/80">
-                          {m.n_terms} term{m.n_terms !== 1 ? "s" : ""}
-                        </span>
-                        {m.family && (
-                          <span className="rounded bg-accent px-1.5 py-0.5 text-[0.6rem] text-muted-foreground">
-                            {m.family}
-                          </span>
-                        )}
-                        {isCurrent && (
-                          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[0.6rem] font-semibold text-primary">
-                            current
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-[0.65rem] text-muted-foreground/40">
-                        {new Date(m.created_at).toLocaleString()}
-                        {m.fit_duration_ms != null && ` · ${m.fit_duration_ms}ms`}
-                      </p>
-                    </div>
-                  </div>
-                  {!isCurrent && (
-                    <button
-                      disabled={isRestoring}
-                      onClick={() => onRestore(m.id)}
-                      className="rounded-lg border border-border px-2.5 py-1 text-[0.65rem] font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary disabled:opacity-40"
-                    >
-                      {isRestoring ? "Restoring…" : "Restore"}
-                    </button>
-                  )}
-                </div>
-                {/* Changes */}
-                {m.changes && m.changes.length > 0 && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {m.changes.map((c, ci) => (
-                      <span
-                        key={ci}
-                        className={cn(
-                          "rounded-md px-2 py-0.5 text-[0.6rem] font-medium",
-                          c.kind === "added" && "bg-emerald-500/10 text-emerald-400",
-                          c.kind === "removed" && "bg-red-500/10 text-red-400",
-                          c.kind === "modified" && "bg-amber-500/10 text-amber-400",
-                        )}
-                      >
-                        {c.description}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {/* Metrics */}
-                <MetricsRow
-                  label="Train"
-                  metrics={m.train}
-                  prev={history[i + 1]?.train ?? null}
-                />
-                {m.test && (
-                  <MetricsRow
-                    label="Test"
-                    metrics={m.test}
-                    prev={history[i + 1]?.test ?? null}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MetricCell({
-  label,
-  value,
-  prevValue,
-  lowerIsBetter,
-  format,
-}: {
-  label: string;
-  value: number | null;
-  prevValue: number | null;
-  lowerIsBetter: boolean;
-  format: (v: number) => string;
-}) {
-  if (value == null) return null;
-  let color = "text-foreground/70";
-  if (prevValue != null) {
-    const improved = lowerIsBetter ? value < prevValue : value > prevValue;
-    const same = Math.abs(value - prevValue) < 1e-10;
-    if (!same) color = improved ? "text-emerald-400" : "text-red-400";
-  }
-  return (
-    <div>
-      <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/30">{label}</p>
-      <p className={cn("font-mono text-xs", color)}>{format(value)}</p>
-    </div>
-  );
-}
-
-function MetricsRow({
-  label,
-  metrics,
-  prev,
-}: {
-  label: string;
-  metrics: SplitMetrics;
-  prev: SplitMetrics | null;
-}) {
-  const fmt2 = (v: number) => v.toFixed(2);
-  const fmt4 = (v: number) => v.toFixed(4);
-  const fmt6 = (v: number) => v.toFixed(6);
-
-  return (
-    <div className="mt-2.5 flex items-center gap-4">
-      <span className="w-9 text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground/40">
-        {label}
-      </span>
-      <MetricCell label="Mean Dev" value={metrics.mean_deviance} prevValue={prev?.mean_deviance ?? null} lowerIsBetter format={fmt6} />
-      <MetricCell label="AIC" value={metrics.aic} prevValue={prev?.aic ?? null} lowerIsBetter format={fmt2} />
-      <MetricCell label="Gini" value={metrics.gini} prevValue={prev?.gini ?? null} lowerIsBetter={false} format={fmt4} />
-      {metrics.n_obs != null && (
-        <div>
-          <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground/30">Obs</p>
-          <p className="font-mono text-xs text-foreground/70">{metrics.n_obs.toLocaleString()}</p>
-        </div>
-      )}
     </div>
   );
 }

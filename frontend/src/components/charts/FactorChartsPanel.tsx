@@ -2,7 +2,8 @@
  * Panel showing exploration and diagnostics charts for a selected factor.
  */
 
-import { useState, memo } from "react";
+import { useState, useRef, memo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Hash, Type, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ColumnMeta, ExplorationData, DiagnosticsData, FactorDiagnostic } from "@/types";
@@ -285,50 +286,7 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
 
       {/* Coefficients / relativities table — fitted factors */}
       {diag.coefficients && diag.coefficients.length > 0 && (
-        <div className="rounded-xl border border-border bg-card">
-          <div className="border-b border-border px-4 py-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Relativities
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-2 text-left font-semibold">Term</th>
-                  <th className="px-4 py-2 text-right font-semibold">Estimate</th>
-                  <th className="px-4 py-2 text-right font-semibold">Relativity</th>
-                  <th className="px-4 py-2 text-right font-semibold">P-value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {diag.coefficients.map((c, i) => (
-                  <tr
-                    key={c.term}
-                    className={cn(
-                      "border-b border-border/50 transition-colors hover:bg-surface-hover",
-                      i % 2 === 0 ? "bg-transparent" : "bg-surface"
-                    )}
-                  >
-                    <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/80">{c.term}</td>
-                    <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
-                      {c.estimate != null ? c.estimate.toFixed(6) : "—"}
-                    </td>
-                    <td className={cn(
-                      "px-4 py-1.5 text-right font-mono text-[0.7rem] font-semibold",
-                      c.relativity != null && c.relativity > 1.05 ? "text-red-400" : c.relativity != null && c.relativity < 0.95 ? "text-emerald-400" : "text-foreground/70"
-                    )}>
-                      {c.relativity != null ? c.relativity.toFixed(4) : "—"}
-                    </td>
-                    <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
-                      {c.p_value != null ? (c.p_value < 0.0001 ? "<0.0001" : c.p_value.toFixed(4)) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <RelativitiesTable coefficients={diag.coefficients} />
       )}
 
       {/* Transform info */}
@@ -336,6 +294,89 @@ function FactorDiagInfo({ diag, expectedPct, devPct }: { diag: FactorDiagnostic;
         <p className="text-[0.6rem] text-muted-foreground">
           Transform: <span className="font-mono text-foreground/70">{diag.transform}</span>
         </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Virtualized relativities table ──────────────────── */
+
+function RelativitiesTable({ coefficients }: { coefficients: FactorDiagnostic["coefficients"] & {} }) {
+  const useVirtual = coefficients.length > 30;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const ROW_HEIGHT = 29;
+
+  const virtualizer = useVirtualizer({
+    count: useVirtual ? coefficients.length : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+
+  const renderRow = (c: (typeof coefficients)[number], i: number) => (
+    <tr
+      key={c.term}
+      className={cn(
+        "border-b border-border/50 transition-colors hover:bg-surface-hover",
+        i % 2 === 0 ? "bg-transparent" : "bg-surface"
+      )}
+    >
+      <td className="px-4 py-1.5 font-mono text-[0.7rem] text-foreground/80">{c.term}</td>
+      <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
+        {c.estimate != null ? c.estimate.toFixed(6) : "—"}
+      </td>
+      <td className={cn(
+        "px-4 py-1.5 text-right font-mono text-[0.7rem] font-semibold",
+        c.relativity != null && c.relativity > 1.05 ? "text-red-400" : c.relativity != null && c.relativity < 0.95 ? "text-emerald-400" : "text-foreground/70"
+      )}>
+        {c.relativity != null ? c.relativity.toFixed(4) : "—"}
+      </td>
+      <td className="px-4 py-1.5 text-right font-mono text-[0.7rem] text-muted-foreground">
+        {c.p_value != null ? (c.p_value < 0.0001 ? "<0.0001" : c.p_value.toFixed(4)) : "—"}
+      </td>
+    </tr>
+  );
+
+  const headerRow = (
+    <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+      <th className="px-4 py-2 text-left font-semibold">Term</th>
+      <th className="px-4 py-2 text-right font-semibold">Estimate</th>
+      <th className="px-4 py-2 text-right font-semibold">Relativity</th>
+      <th className="px-4 py-2 text-right font-semibold">P-value</th>
+    </tr>
+  );
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="border-b border-border px-4 py-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Relativities
+        </h3>
+      </div>
+      {useVirtual ? (
+        <div ref={scrollRef} className="overflow-auto max-h-[500px]">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-card">{headerRow}</thead>
+            <tbody>
+              {virtualizer.getVirtualItems().length > 0 && virtualizer.getVirtualItems()[0].start > 0 && (
+                <tr><td colSpan={4} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 0 }} /></tr>
+              )}
+              {virtualizer.getVirtualItems().map((vRow) => renderRow(coefficients[vRow.index], vRow.index))}
+              {virtualizer.getVirtualItems().length > 0 && (
+                <tr><td colSpan={4} style={{ height: virtualizer.getTotalSize() - (virtualizer.getVirtualItems().at(-1)!.start + virtualizer.getVirtualItems().at(-1)!.size), padding: 0, border: 0 }} /></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>{headerRow}</thead>
+            <tbody>
+              {coefficients.map((c, i) => renderRow(c, i))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

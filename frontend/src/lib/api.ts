@@ -13,7 +13,6 @@ async function handleResponse<T>(method: string, path: string, res: Response, t0
   }
   const data = await res.json() as T;
   log.info(TAG, `<-- ${method} ${path}  status=${res.status}  ${elapsed}ms`);
-  log.debug(TAG, `<-- ${method} ${path}  response payload`, data);
   return data;
 }
 
@@ -36,6 +35,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       },
     });
   } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
     const elapsed = Math.round(performance.now() - t0);
     log.error(TAG, `--> ${method} ${path}  NETWORK ERROR after ${elapsed}ms`, err);
     throw err;
@@ -43,13 +43,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   return handleResponse<T>(method, path, res, t0);
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
   log.info(TAG, `--> GET ${path}`);
   const t0 = performance.now();
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`);
+    res = await fetch(`${BASE}${path}`, signal ? { signal } : undefined);
   } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
     const elapsed = Math.round(performance.now() - t0);
     log.error(TAG, `--> GET ${path}  NETWORK ERROR after ${elapsed}ms`, err);
     throw err;
@@ -57,10 +58,11 @@ export async function apiGet<T>(path: string): Promise<T> {
   return handleResponse<T>("GET", path, res, t0);
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+export async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   return apiFetch<T>(path, {
     method: "POST",
     body: JSON.stringify(body),
+    signal,
   });
 }
 

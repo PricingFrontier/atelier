@@ -2,7 +2,7 @@
  * Reusable bar+line chart for factor-level data (diagnostics and exploration).
  */
 
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -48,7 +48,7 @@ export default memo(function FactorChart({
 }) {
   const volumeLabel = hasExposure ? "Exposure" : "Count";
 
-  const renderTooltip = ({ active, payload, label }: any) => {
+  const renderTooltip = useCallback(({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     return (
@@ -66,7 +66,7 @@ export default memo(function FactorChart({
         <p className="text-muted-foreground">n = {d?.n?.toLocaleString()}</p>
       </div>
     );
-  };
+  }, [tooltipType, volumeLabel]);
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">

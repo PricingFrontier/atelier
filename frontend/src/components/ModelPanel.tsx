@@ -3,7 +3,8 @@
  * Shows warnings, train/test metrics, lift chart, model comparison, and coefficient table.
  */
 
-import { useState, memo } from "react";
+import { useState, useRef, memo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -431,82 +432,119 @@ function CoefficientTable({
         p: c.pvalue,
       }));
 
+  const useVirtual = rows.length > 30;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const ROW_HEIGHT = 33;
+
+  const virtualizer = useVirtualizer({
+    count: useVirtual ? rows.length : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+
   if (rows.length === 0) return null;
 
+  const renderRow = (row: (typeof rows)[number], i: number, visualIndex?: number) => {
+    const pVal = row.p ?? 1;
+    const sig = pVal < 0.001 ? "***" : pVal < 0.01 ? "**" : pVal < 0.05 ? "*" : pVal < 0.1 ? "." : "";
+    const vifVal = vifMap.get(row.name);
+    const isVirtual = visualIndex !== undefined;
+    const staggerIdx = (visualIndex ?? i) + 1;
+    const animClass = isVirtual ? undefined : staggerIdx <= 15 ? `fade-up-stagger-${staggerIdx}` : "fade-up-coeff";
+    return (
+      <tr
+        key={row.key}
+        className={cn(
+          "border-b border-border/50 transition-colors hover:bg-surface-hover",
+          animClass,
+          i % 2 === 0 ? "bg-transparent" : "bg-surface"
+        )}
+      >
+        <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{row.name}</td>
+        <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-foreground">{fmt(row.estimate, 6)}</td>
+        <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{fmt(row.se, 6)}</td>
+        <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{fmt(row.z, 3)}</td>
+        <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{row.p != null ? pFmt(row.p) : fmt(null, 4)}</td>
+        {hasDiag && (
+          <td className={cn(
+            "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
+            row.relativity != null && row.relativity > 1 ? "text-red-400" : row.relativity != null && row.relativity < 1 ? "text-emerald-400" : "text-foreground/70"
+          )}>
+            {fmt(row.relativity ?? null, 4)}
+          </td>
+        )}
+        {hasDiag && (
+          <td className="px-4 py-2 text-right font-mono text-[0.6rem] text-muted-foreground">
+            {row.ci ? `[${fmt(row.ci[0], 4)}, ${fmt(row.ci[1], 4)}]` : "—"}
+          </td>
+        )}
+        {hasDiag && vifMap.size > 0 && (
+          <td className={cn(
+            "px-4 py-2 text-right font-mono text-[0.75rem]",
+            vifVal != null && vifVal > 5 ? "text-red-400" : vifVal != null && vifVal > 2.5 ? "text-amber-400" : "text-muted-foreground"
+          )}>
+            {vifVal != null ? fmt(vifVal, 2) : "—"}
+          </td>
+        )}
+        <td className={cn(
+          "px-4 py-2 text-right font-mono text-[0.75rem] font-bold",
+          sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400" : sig.includes("*") ? "text-blue-400" : "text-muted-foreground"
+        )}>
+          {sig || ""}
+        </td>
+      </tr>
+    );
+  };
+
+  const headerRow = (
+    <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+      <th className="px-4 py-2.5 text-left font-semibold">Parameter</th>
+      <th className="px-4 py-2.5 text-right font-semibold">Estimate</th>
+      <th className="px-4 py-2.5 text-right font-semibold">Std Error</th>
+      <th className="px-4 py-2.5 text-right font-semibold">z-value</th>
+      <th className="px-4 py-2.5 text-right font-semibold">P(&gt;|z|)</th>
+      {hasDiag && <th className="px-4 py-2.5 text-right font-semibold">Relativity</th>}
+      {hasDiag && <th className="px-4 py-2.5 text-right font-semibold">95% CI</th>}
+      {hasDiag && vifMap.size > 0 && <th className="px-4 py-2.5 text-right font-semibold">VIF</th>}
+      <th className="px-4 py-2.5 text-right font-semibold">Sig</th>
+    </tr>
+  );
+
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className="rounded-xl border border-border bg-card animate-[fadeUp_0.3s_ease-out_both]">
       <div className="border-b border-border px-4 py-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Coefficients ({rows.length})
         </h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-[0.65rem] uppercase tracking-wider text-muted-foreground">
-              <th className="px-4 py-2.5 text-left font-semibold">Parameter</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Estimate</th>
-              <th className="px-4 py-2.5 text-right font-semibold">Std Error</th>
-              <th className="px-4 py-2.5 text-right font-semibold">z-value</th>
-              <th className="px-4 py-2.5 text-right font-semibold">P(&gt;|z|)</th>
-              {hasDiag && <th className="px-4 py-2.5 text-right font-semibold">Relativity</th>}
-              {hasDiag && <th className="px-4 py-2.5 text-right font-semibold">95% CI</th>}
-              {hasDiag && vifMap.size > 0 && <th className="px-4 py-2.5 text-right font-semibold">VIF</th>}
-              <th className="px-4 py-2.5 text-right font-semibold">Sig</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => {
-              const pVal = row.p ?? 1;
-              const sig = pVal < 0.001 ? "***" : pVal < 0.01 ? "**" : pVal < 0.05 ? "*" : pVal < 0.1 ? "." : "";
-              const vifVal = vifMap.get(row.name);
-              return (
-                <tr
-                  key={row.key}
-                  className={cn(
-                    "border-b border-border/50 transition-colors hover:bg-surface-hover",
-                    i % 2 === 0 ? "bg-transparent" : "bg-surface"
-                  )}
-                  style={{ animation: `fadeUp 0.2s ease-out ${Math.min(0.02 * i, 0.6)}s both` }}
-                >
-                  <td className="px-4 py-2 font-mono text-[0.75rem] text-foreground/80">{row.name}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-foreground">{fmt(row.estimate, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{fmt(row.se, 6)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{fmt(row.z, 3)}</td>
-                  <td className="px-4 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">{row.p != null ? pFmt(row.p) : fmt(null, 4)}</td>
-                  {hasDiag && (
-                    <td className={cn(
-                      "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
-                      row.relativity != null && row.relativity > 1 ? "text-red-400" : row.relativity != null && row.relativity < 1 ? "text-emerald-400" : "text-foreground/70"
-                    )}>
-                      {fmt(row.relativity ?? null, 4)}
-                    </td>
-                  )}
-                  {hasDiag && (
-                    <td className="px-4 py-2 text-right font-mono text-[0.6rem] text-muted-foreground">
-                      {row.ci ? `[${fmt(row.ci[0], 4)}, ${fmt(row.ci[1], 4)}]` : "—"}
-                    </td>
-                  )}
-                  {hasDiag && vifMap.size > 0 && (
-                    <td className={cn(
-                      "px-4 py-2 text-right font-mono text-[0.75rem]",
-                      vifVal != null && vifVal > 5 ? "text-red-400" : vifVal != null && vifVal > 2.5 ? "text-amber-400" : "text-muted-foreground"
-                    )}>
-                      {vifVal != null ? fmt(vifVal, 2) : "—"}
-                    </td>
-                  )}
-                  <td className={cn(
-                    "px-4 py-2 text-right font-mono text-[0.75rem] font-bold",
-                    sig.includes("***") ? "text-emerald-400" : sig.includes("**") ? "text-emerald-400" : sig.includes("*") ? "text-blue-400" : "text-muted-foreground"
-                  )}>
-                    {sig || ""}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {useVirtual ? (
+        <div ref={scrollRef} className="overflow-auto max-h-[600px]">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-card">{headerRow}</thead>
+            <tbody>
+              {/* top spacer */}
+              {virtualizer.getVirtualItems().length > 0 && virtualizer.getVirtualItems()[0].start > 0 && (
+                <tr><td colSpan={99} style={{ height: virtualizer.getVirtualItems()[0].start, padding: 0, border: 0 }} /></tr>
+              )}
+              {virtualizer.getVirtualItems().map((vRow, vi) => renderRow(rows[vRow.index], vRow.index, vi))}
+              {/* bottom spacer */}
+              {virtualizer.getVirtualItems().length > 0 && (
+                <tr><td colSpan={99} style={{ height: virtualizer.getTotalSize() - (virtualizer.getVirtualItems().at(-1)!.start + virtualizer.getVirtualItems().at(-1)!.size), padding: 0, border: 0 }} /></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>{headerRow}</thead>
+            <tbody>
+              {rows.map((row, i) => renderRow(row, i))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div className="border-t border-border px-4 py-2 text-[0.6rem] text-muted-foreground">
         Signif. codes: *** 0.001 ** 0.01 * 0.05 . 0.1
       </div>

@@ -131,7 +131,7 @@ function DistTestCard({ title, data }: { title: string; data: any }) {
 
 /* ── VIF section ──────────────────────────────────────── */
 
-function VifSection({ vif }: { vif: any[] }) {
+const VifSection = memo(function VifSection({ vif }: { vif: any[] }) {
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
@@ -181,11 +181,11 @@ function VifSection({ vif }: { vif: any[] }) {
       </div>
     </div>
   );
-}
+});
 
 /* ── Correlation section ──────────────────────────────── */
 
-function CorrelationSection({ data, title }: { data: any; title: string }) {
+const CorrelationSection = memo(function CorrelationSection({ data, title }: { data: any; title: string }) {
   if (!data || typeof data !== "object") return null;
 
   // Handle both matrix format and flat pair list
@@ -253,11 +253,11 @@ function CorrelationSection({ data, title }: { data: any; title: string }) {
       </div>
     </div>
   );
-}
+});
 
 /* ── Factor summary table ─────────────────────────────── */
 
-function FactorSummaryTable({ factors }: { factors: any[] }) {
+const FactorSummaryTable = memo(function FactorSummaryTable({ factors }: { factors: any[] }) {
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
@@ -313,4 +313,4 @@ function FactorSummaryTable({ factors }: { factors: any[] }) {
       </div>
     </div>
   );
-}
+});
