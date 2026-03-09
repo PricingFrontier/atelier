@@ -12,6 +12,7 @@ from atelier.db.engine import get_session
 from atelier.db.models import Model, Project
 from atelier.schemas import ModelDetail, ModelSaveRequest, ModelSummary
 from atelier.schemas.model_save import SplitMetrics, VersionChange
+from atelier.services.model_service import build_model_spec, compute_changes
 
 _MAX_VERSION_RETRIES = 5
 
@@ -44,16 +45,16 @@ async def save_model(req: ModelSaveRequest, session: AsyncSession = Depends(get_
         log.warning("[models/save] project not found: %s", req.project_id)
         raise HTTPException(status_code=404, detail="Project not found")
 
-    spec = {
-        "dataset_path": req.dataset_path,
-        "response": req.response,
-        "family": req.family,
-        "link": req.link,
-        "offset": req.offset,
-        "weights": req.weights,
-        "terms": [t.model_dump() for t in req.terms],
-        "split": req.split.model_dump() if req.split else None,
-    }
+    spec = build_model_spec(
+        dataset_path=req.dataset_path,
+        response=req.response,
+        family=req.family,
+        link=req.link,
+        offset=req.offset,
+        weights=req.weights,
+        terms=[t.model_dump() for t in req.terms],
+        split=req.split.model_dump() if req.split else None,
+    )
 
     last_exc: Exception | None = None
     for attempt in range(_MAX_VERSION_RETRIES):
@@ -124,72 +125,6 @@ async def save_model(req: ModelSaveRequest, session: AsyncSession = Depends(get_
     ) from last_exc
 
 
-def _term_key(t: dict) -> str:
-    """Unique identity for a term (column + type)."""
-    return f"{t.get('column', '')}::{t.get('type', '')}"
-
-
-def _term_label(t: dict) -> str:
-    """Human-readable label for a term."""
-    col = t.get("column", "?")
-    typ = t.get("type", "?")
-    extras = []
-    if t.get("df") is not None:
-        extras.append(f"df={t['df']}")
-    if t.get("k") is not None:
-        extras.append(f"k={t['k']}")
-    if t.get("monotonicity"):
-        extras.append(t["monotonicity"])
-    suffix = f", {', '.join(extras)}" if extras else ""
-    return f"{col} ({typ}{suffix})"
-
-
-def _term_params(t: dict) -> dict:
-    """Extract tunable params for modification detection."""
-    return {
-        "df": t.get("df"),
-        "k": t.get("k"),
-        "monotonicity": t.get("monotonicity"),
-        "expr": t.get("expr"),
-    }
-
-
-def _compute_changes(
-    prev_terms: list[dict], curr_terms: list[dict]
-) -> list[VersionChange]:
-    """Diff two term lists and return a list of changes."""
-    prev_map = {_term_key(t): t for t in prev_terms}
-    curr_map = {_term_key(t): t for t in curr_terms}
-
-    changes: list[VersionChange] = []
-
-    # Added
-    for key in curr_map:
-        if key not in prev_map:
-            changes.append(
-                VersionChange(kind="added", description=f"+ {_term_label(curr_map[key])}")
-            )
-
-    # Removed
-    for key in prev_map:
-        if key not in curr_map:
-            changes.append(
-                VersionChange(kind="removed", description=f"− {_term_label(prev_map[key])}")
-            )
-
-    # Modified (same column+type but different params)
-    for key in curr_map:
-        if key in prev_map and _term_params(curr_map[key]) != _term_params(prev_map[key]):
-            changes.append(
-                VersionChange(
-                    kind="modified",
-                    description=f"~ {_term_label(curr_map[key])}",
-                )
-            )
-
-    return changes
-
-
 def _extract_split_metrics(diag_json: str | None, split: str) -> SplitMetrics:
     """Extract key metrics for a train/test split from stored diagnostics JSON."""
     if not diag_json:
@@ -232,7 +167,7 @@ async def list_models(project_id: str, session: AsyncSession = Depends(get_sessi
 
     for m in rows:
         curr_terms = m.spec.get("terms", []) if m.spec else []
-        changes = _compute_changes(prev_terms, curr_terms) if m.version > 1 else []
+        changes = compute_changes(prev_terms, curr_terms) if m.version > 1 else []
 
         train = _extract_split_metrics(m.diagnostics_json, "train")
         test_metrics = _extract_split_metrics(m.diagnostics_json, "test")

@@ -93,6 +93,7 @@ const HistoryPanel = memo(function HistoryPanel({
                     <button
                       disabled={isRestoring}
                       onClick={() => onRestore(m.id)}
+                      aria-label={`Restore version ${m.version}`}
                       className="rounded-lg border border-border px-2.5 py-1 text-[0.65rem] font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/[0.06] hover:text-primary disabled:opacity-40"
                     >
                       {isRestoring ? "Restoring…" : "Restore"}

@@ -15,15 +15,8 @@ import type { DiagnosticsData, OverdispersionData } from "@/types";
 
 /* ── Helpers ──────────────────────────────────────────── */
 
-export function fmt(v: number | null | undefined, dp: number): string {
-  if (v == null) return "\u2014";
-  return v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
-}
-
-export function pFmt(p: number): string {
-  if (p < 0.0001) return "<0.0001";
-  return p.toFixed(4);
-}
+import { fmt, pFmt } from "@/lib/formatting";
+export { fmt, pFmt };
 
 export type StatusColor = "green" | "amber" | "red" | "blue" | "grey";
 

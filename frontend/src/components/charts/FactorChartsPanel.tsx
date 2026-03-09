@@ -2,7 +2,7 @@
  * Panel showing exploration and diagnostics charts for a selected factor.
  */
 
-import { useState, useRef, memo, useCallback, useMemo } from "react";
+import { useState, useRef, memo, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Hash, Type, Loader2, AlertCircle } from "lucide-react";
 import {
@@ -16,6 +16,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { truncateLabel } from "@/lib/formatting";
+import { CHART_AXIS_STYLE, CHART_GRID_STYLE, CHART_MARGINS } from "@/lib/chartConfig";
 import type {
   ColumnMeta,
   ExplorationData,
@@ -70,6 +72,37 @@ export default memo(function FactorChartsPanel({
     [diagnostics?.factor_deviance, selectedFactor],
   );
 
+  // Memoize chart data transformations
+  const catDiagData = useMemo(
+    () =>
+      catDiag && catDiag.length > 0
+        ? catDiag.map((d) => ({
+            label: truncateLabel(String(d.level), 14),
+            volume: d.exposure > 0 ? d.exposure : d.n,
+            n: d.n,
+            exposure: d.exposure,
+            rate1: d.actual,
+            rate2: d.predicted,
+          }))
+        : null,
+    [catDiag],
+  );
+
+  const contDiagData = useMemo(
+    () =>
+      contDiag && contDiag.length > 0
+        ? contDiag.map((d) => ({
+            label: `${d.range_min}\u2013${d.range_max}`,
+            volume: d.exposure > 0 ? d.exposure : d.n,
+            n: d.n,
+            exposure: d.exposure,
+            rate1: d.actual,
+            rate2: d.predicted,
+          }))
+        : null,
+    [contDiag],
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -121,52 +154,38 @@ export default memo(function FactorChartsPanel({
       </div>
 
       {/* Diagnostics charts (post-fit) */}
-      {catDiag && catDiag.length > 0 && (
+      {catDiagData && (
         <FactorChart
           title="Actual vs Predicted"
-          data={catDiag.map((d) => ({
-            label: String(d.level).length > 14 ? String(d.level).slice(0, 12) + "\u2026" : String(d.level),
-            volume: d.exposure > 0 ? d.exposure : d.n,
-            n: d.n,
-            exposure: d.exposure,
-            rate1: d.actual,
-            rate2: d.predicted,
-          }))}
-          hasExposure={catDiag.some((d) => d.exposure > 0)}
+          data={catDiagData}
+          hasExposure={catDiag!.some((d) => d.exposure > 0)}
           lines={[
             { key: "rate1", name: "Actual", color: "hsl(210 100% 60%)" },
             { key: "rate2", name: "Predicted", color: "hsl(38 92% 56%)" },
           ]}
-          rotateLabels={catDiag.length > 8}
+          rotateLabels={catDiag!.length > 8}
           tooltipType="diag"
         />
       )}
-      {contDiag && contDiag.length > 0 && (
+      {contDiagData && (
         <FactorChart
           title="Actual vs Predicted"
-          data={contDiag.map((d) => ({
-            label: `${d.range_min}\u2013${d.range_max}`,
-            volume: d.exposure > 0 ? d.exposure : d.n,
-            n: d.n,
-            exposure: d.exposure,
-            rate1: d.actual,
-            rate2: d.predicted,
-          }))}
-          hasExposure={contDiag.some((d) => d.exposure > 0)}
+          data={contDiagData}
+          hasExposure={contDiag!.some((d) => d.exposure > 0)}
           lines={[
             { key: "rate1", name: "Actual", color: "hsl(210 100% 60%)" },
             { key: "rate2", name: "Predicted", color: "hsl(38 92% 56%)" },
           ]}
-          rotateLabels={contDiag.length > 8}
+          rotateLabels={contDiag!.length > 8}
           tooltipType="diag"
         />
       )}
 
-      {/* Partial Dependence Plot — continuous fitted factors */}
-      {pdData && <PartialDependencePlot data={pdData} />}
+      {/* Partial Dependence Plot — fitted factors only */}
+      {pdData && factorDiag?.in_model && <PartialDependencePlot data={pdData} />}
 
-      {/* Factor Deviance Breakdown — fitted factors */}
-      {devData && <FactorDevianceTable data={devData} />}
+      {/* Factor Deviance Breakdown — fitted factors only */}
+      {devData && factorDiag?.in_model && <FactorDevianceTable data={devData} />}
 
       {/* Exploration charts (pre-fit) */}
       {!hasDiag && factorStat?.type === "continuous" && factorStat.response_by_bin && factorStat.response_by_bin.length > 0 && (
@@ -188,7 +207,7 @@ export default memo(function FactorChartsPanel({
         <FactorChart
           title="Response Rate by Level"
           data={factorStat.levels.map((d) => ({
-            label: String(d.level).length > 14 ? String(d.level).slice(0, 12) + "\u2026" : String(d.level),
+            label: truncateLabel(String(d.level), 14),
             volume: d.exposure > 0 ? d.exposure : d.count,
             n: d.count,
             exposure: d.exposure,
@@ -234,7 +253,7 @@ function PartialDependencePlot({ data }: { data: PartialDependence }) {
     [data.grid_values, data.relativities],
   );
 
-  const renderTooltip = useCallback(({ active, payload }: any) => {
+  const renderTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     return (
@@ -247,7 +266,7 @@ function PartialDependencePlot({ data }: { data: PartialDependence }) {
         </p>
       </div>
     );
-  }, []);
+  };
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -256,25 +275,23 @@ function PartialDependencePlot({ data }: { data: PartialDependence }) {
       </h3>
       <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
+          <ComposedChart data={chartData} margin={CHART_MARGINS.default}>
+            <CartesianGrid {...CHART_GRID_STYLE} />
             <XAxis
               dataKey="x"
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-              tickLine={false}
-              tickFormatter={(v: number) =>
-                Math.abs(v) >= 1000
-                  ? `${(v / 1000).toFixed(0)}k`
-                  : v % 1 === 0
-                    ? String(v)
-                    : v.toFixed(2)
+              {...CHART_AXIS_STYLE}
+              tickFormatter={(v: unknown) =>
+                typeof v !== "number"
+                  ? String(v)
+                  : Math.abs(v) >= 1000
+                    ? `${(v / 1000).toFixed(0)}k`
+                    : v % 1 === 0
+                      ? String(v)
+                      : v.toFixed(2)
               }
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-              tickLine={false}
+              {...CHART_AXIS_STYLE}
               domain={["auto", "auto"]}
             />
             <Tooltip content={renderTooltip} />

@@ -1,0 +1,1 @@
+function e(e,t){return e==null?`—`:e.toLocaleString(void 0,{minimumFractionDigits:t,maximumFractionDigits:t})}function t(e){return e==null?`—`:e<1e-4?`<0.0001`:e.toFixed(4)}function n(e,t=14){return e.length>t?e.slice(0,t-1)+`…`:e}export{t as n,n as r,e as t};

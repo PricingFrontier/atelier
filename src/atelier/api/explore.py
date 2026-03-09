@@ -76,7 +76,7 @@ async def explore_data(req: ExploreRequest):
     except Exception as exc:
         ms = int((time.perf_counter() - t0) * 1000)
         log.error("[explore] rs.explore_data FAILED after %dms: %s", ms, exc, exc_info=True)
-        raise HTTPException(422, f"Exploration failed: {exc}")
+        raise HTTPException(status_code=422, detail=f"Exploration failed: {exc}")
 
     # Fit a null model (intercept only) to get score tests for all factors
     null_diagnostics = None

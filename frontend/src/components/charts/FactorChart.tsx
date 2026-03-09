@@ -14,6 +14,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { CHART_AXIS_STYLE, CHART_GRID_STYLE, CHART_MARGINS, CHART_COLORS } from "@/lib/chartConfig";
 
 export interface ChartLine {
   key: string;
@@ -75,23 +76,21 @@ export default memo(function FactorChart({
       </h3>
       <div className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
+          <ComposedChart data={data} margin={CHART_MARGINS.default}>
+            <CartesianGrid {...CHART_GRID_STYLE} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-              tickLine={false}
+              {...CHART_AXIS_STYLE}
               interval={0}
               angle={rotateLabels ? -35 : 0}
               textAnchor={rotateLabels ? "end" : "middle"}
               height={rotateLabels ? 60 : 30}
             />
-            <YAxis yAxisId="vol" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }} axisLine={{ stroke: "rgba(255,255,255,0.15)" }} tickLine={false} />
-            <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }} axisLine={{ stroke: "rgba(255,255,255,0.15)" }} tickLine={false} />
+            <YAxis yAxisId="vol" {...CHART_AXIS_STYLE} />
+            <YAxis yAxisId="rate" orientation="right" {...CHART_AXIS_STYLE} />
             <Tooltip content={renderTooltip} />
             <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.7)" }} />
-            <Bar yAxisId="vol" dataKey="volume" name={volumeLabel} fill="hsl(220 20% 45% / 0.5)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            <Bar yAxisId="vol" dataKey="volume" name={volumeLabel} fill={CHART_COLORS.bar} radius={[3, 3, 0, 0]} isAnimationActive={false} />
             {lines.map((l) => (
               <Line key={l.key} yAxisId="rate" dataKey={l.key} name={l.name} stroke={l.color} strokeWidth={2} dot={{ r: 3, fill: l.color }} isAnimationActive={false} />
             ))}

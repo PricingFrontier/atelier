@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   testDir: "./e2e",
@@ -23,7 +27,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "cd /home/ralph/atelier && python -m atelier --no-browser --port 8457",
+    command: `cd ${path.resolve(__dirname, "..")} && python -m atelier --no-browser --port 8457`,
     url: "http://localhost:8457",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

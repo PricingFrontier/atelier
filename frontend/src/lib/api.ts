@@ -6,9 +6,14 @@ const BASE = "/api";
 async function handleResponse<T>(method: string, path: string, res: Response, t0: number): Promise<T> {
   const elapsed = Math.round(performance.now() - t0);
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const msg = body.detail ?? body.message ?? `API error ${res.status}`;
-    log.error(TAG, `<-- ${method} ${path}  status=${res.status}  ${elapsed}ms  error: ${msg}`, body);
+    let msg: string;
+    try {
+      const body = await res.json() as { detail?: string; message?: string };
+      msg = body.detail ?? body.message ?? `API error ${res.status}`;
+    } catch {
+      msg = `API error ${res.status}`;
+    }
+    log.error(TAG, `<-- ${method} ${path}  status=${res.status}  ${elapsed}ms  error: ${msg}`);
     throw new Error(msg);
   }
   const data = await res.json() as T;
@@ -66,20 +71,22 @@ export async function apiPost<T>(path: string, body: unknown, signal?: AbortSign
   });
 }
 
-export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+export async function apiPut<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   return apiFetch<T>(path, {
     method: "PUT",
     body: JSON.stringify(body),
+    signal,
   });
 }
 
-export async function apiDelete<T>(path: string): Promise<T> {
+export async function apiDelete<T>(path: string, signal?: AbortSignal): Promise<T> {
   log.info(TAG, `--> DELETE ${path}`);
   const t0 = performance.now();
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, { method: "DELETE" });
+    res = await fetch(`${BASE}${path}`, { method: "DELETE", signal });
   } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
     const elapsed = Math.round(performance.now() - t0);
     log.error(TAG, `--> DELETE ${path}  NETWORK ERROR after ${elapsed}ms`, err);
     throw err;

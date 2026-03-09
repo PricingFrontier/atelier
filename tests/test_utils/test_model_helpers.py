@@ -2,12 +2,14 @@
 
 import json
 
-from atelier.api.models import (
-    _compute_changes,
-    _extract_split_metrics,
+from atelier.services.model_service import (
+    compute_changes as _compute_changes,
     _term_key,
     _term_label,
     _term_params,
+)
+from atelier.api.models import (
+    _extract_split_metrics,
 )
 
 

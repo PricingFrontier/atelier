@@ -1,6 +1,7 @@
 import logging
 
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 from atelier.db.engine import get_engine
 from atelier.db.models import Base
@@ -35,8 +36,13 @@ async def ensure_schema() -> None:
                     text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
                 )
                 log.info("[migrations] added column %s.%s (%s)", table, column, col_type)
-            except Exception:
-                log.debug("[migrations] column %s.%s already exists", table, column)
+            except OperationalError as exc:
+                msg = str(exc).lower()
+                if "duplicate" in msg or "already exists" in msg:
+                    log.debug("[migrations] column %s.%s already exists", table, column)
+                else:
+                    log.error("[migrations] failed to add column %s.%s: %s", table, column, exc)
+                    raise
     # Create unique index for concurrency safety on (project_id, version).
     _INDEX_MIGRATIONS: list[str] = [
         "CREATE UNIQUE INDEX IF NOT EXISTS uix_model_project_version ON models(project_id, version)",
@@ -47,6 +53,11 @@ async def ensure_schema() -> None:
             try:
                 await conn.execute(text(ddl))
                 log.info("[migrations] executed: %s", ddl)
-            except Exception:
-                log.debug("[migrations] index already exists or skipped: %s", ddl)
+            except OperationalError as exc:
+                msg = str(exc).lower()
+                if "duplicate" in msg or "already exists" in msg:
+                    log.debug("[migrations] index already exists or skipped: %s", ddl)
+                else:
+                    log.error("[migrations] failed to execute: %s — %s", ddl, exc)
+                    raise
     log.info("[migrations] schema migration complete")

@@ -102,6 +102,33 @@ export interface ModelSummary {
   changes: VersionChange[];
 }
 
+export interface ModelDetailResponse {
+  version: number;
+  spec?: {
+    terms?: Array<{
+      column: string;
+      type: string;
+      df?: number;
+      k?: number;
+      monotonicity?: string;
+      expr?: string;
+    }>;
+    family?: string;
+    link?: string;
+  };
+  coef_table?: CoefRow[];
+  fit_duration_ms?: number;
+  summary?: string;
+  n_obs?: number;
+  n_validation?: number | null;
+  deviance?: number | null;
+  null_deviance?: number | null;
+  aic?: number | null;
+  bic?: number | null;
+  n_params?: number;
+  diagnostics?: import("./diagnostics").DiagnosticsData | null;
+}
+
 export interface MenuPos {
   x: number;
   y: number;

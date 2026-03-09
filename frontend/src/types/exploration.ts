@@ -98,12 +98,21 @@ export interface ExploreOverdispersion {
   is_overdispersed: boolean;
 }
 
+/* ── Univariate test result ─────────────────────────── */
+
+export interface UnivariateTestResult {
+  factor: string;
+  statistic: number;
+  pvalue: number;
+  df?: number;
+}
+
 /* ── Main exploration data ──────────────────────────── */
 
 export interface ExplorationData {
   data_summary: { n_rows: number; n_columns: number; response_column: string; exposure_column: string };
   factor_stats: ExploreFactorStat[];
-  univariate_tests?: unknown[];
+  univariate_tests?: UnivariateTestResult[];
   correlations?: CorrelationData;
   cramers_v?: CorrelationData;
   vif?: VifEntry[];

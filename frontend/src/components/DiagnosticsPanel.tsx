@@ -2,7 +2,7 @@
  * Diagnostics panel — calibration, lift chart, residuals, overdispersion.
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -16,6 +16,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { CHART_AXIS_STYLE, CHART_GRID_STYLE, CHART_MARGINS, CHART_COLORS } from "@/lib/chartConfig";
 import type {
   DiagnosticsData,
   CalibrationData,
@@ -124,16 +125,20 @@ export default memo(function DiagnosticsPanel({
 /* ── Lift chart ───────────────────────────────────────── */
 
 function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsData["lift_chart"]> }) {
-  const data = liftChart.deciles.map((d) => ({
-    decile: d.decile,
-    ae_ratio: d.ae_ratio,
-    lift: d.lift,
-    cumulative_lift: d.cumulative_lift,
-    n: d.n,
-    exposure: d.exposure,
-    actual: d.actual,
-    predicted: d.predicted,
-  }));
+  const data = useMemo(
+    () =>
+      liftChart.deciles.map((d) => ({
+        decile: d.decile,
+        ae_ratio: d.ae_ratio,
+        lift: d.lift,
+        cumulative_lift: d.cumulative_lift,
+        n: d.n,
+        exposure: d.exposure,
+        actual: d.actual,
+        predicted: d.predicted,
+      })),
+    [liftChart.deciles],
+  );
 
   const renderTooltip = ({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ payload: Record<string, number> }> }) => {
     if (!active || !payload?.length) return null;
@@ -169,18 +174,14 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
       </div>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
+          <ComposedChart data={data} margin={CHART_MARGINS.default}>
+            <CartesianGrid {...CHART_GRID_STYLE} />
             <XAxis
               dataKey="decile"
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-              tickLine={false}
+              {...CHART_AXIS_STYLE}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
-              axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-              tickLine={false}
+              {...CHART_AXIS_STYLE}
             />
             <Tooltip content={renderTooltip} />
             <Legend wrapperStyle={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.7)" }} />
@@ -188,25 +189,25 @@ function LiftChartSection({ liftChart }: { liftChart: NonNullable<DiagnosticsDat
             <Bar
               dataKey="ae_ratio"
               name="A/E Ratio"
-              fill="hsl(220 20% 45% / 0.5)"
+              fill={CHART_COLORS.bar}
               radius={[3, 3, 0, 0]}
               isAnimationActive={false}
             />
             <Line
               dataKey="lift"
               name="Lift"
-              stroke="hsl(210 100% 60%)"
+              stroke={CHART_COLORS.actual}
               strokeWidth={2}
-              dot={{ r: 3, fill: "hsl(210 100% 60%)" }}
+              dot={{ r: 3, fill: CHART_COLORS.actual }}
               isAnimationActive={false}
             />
             <Line
               dataKey="cumulative_lift"
               name="Cumulative Lift"
-              stroke="hsl(38 92% 56%)"
+              stroke={CHART_COLORS.predicted}
               strokeWidth={2}
               strokeDasharray="4 4"
-              dot={{ r: 3, fill: "hsl(38 92% 56%)" }}
+              dot={{ r: 3, fill: CHART_COLORS.predicted }}
               isAnimationActive={false}
             />
           </ComposedChart>
@@ -312,19 +313,15 @@ function CalibrationSection({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={aeByDecile}
-                margin={{ top: 8, right: 16, bottom: 4, left: 0 }}
+                margin={CHART_MARGINS.default}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.12)" />
+                <CartesianGrid {...CHART_GRID_STYLE} />
                 <XAxis
                   dataKey="decile"
-                  tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
-                  axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-                  tickLine={false}
+                  {...CHART_AXIS_STYLE}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: "rgba(255,255,255,0.65)" }}
-                  axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
-                  tickLine={false}
+                  {...CHART_AXIS_STYLE}
                   domain={["auto", "auto"]}
                 />
                 <Tooltip
@@ -344,7 +341,7 @@ function CalibrationSection({
                 <Bar
                   dataKey="ae_ratio"
                   name="A/E Ratio"
-                  fill="hsl(220 20% 45% / 0.5)"
+                  fill={CHART_COLORS.bar}
                   radius={[3, 3, 0, 0]}
                   isAnimationActive={false}
                 />

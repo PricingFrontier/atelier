@@ -26,12 +26,12 @@ async def upload_dataset(file: UploadFile):
     log.info("[upload] received file=%s  content_type=%s", file.filename, file.content_type)
     if not file.filename:
         log.warning("[upload] rejected: no filename provided")
-        raise HTTPException(400, "No filename provided")
+        raise HTTPException(status_code=400, detail="No filename provided")
 
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if ext not in SUPPORTED_FORMATS:
         log.warning("[upload] rejected: unsupported format '.%s'", ext)
-        raise HTTPException(400, f"Unsupported format '.{ext}'. Use: {SUPPORTED_FORMATS}")
+        raise HTTPException(status_code=400, detail=f"Unsupported format '.{ext}'. Use: {SUPPORTED_FORMATS}")
 
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 

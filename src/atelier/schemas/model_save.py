@@ -2,9 +2,9 @@
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
-from atelier.schemas.model_spec import SplitSpec, TermSpec
+from atelier.schemas.model_spec import VALID_FAMILIES, SplitSpec, TermSpec
 
 
 class ModelSaveRequest(BaseModel):
@@ -19,6 +19,24 @@ class ModelSaveRequest(BaseModel):
     weights: str | None = None
     terms: list[TermSpec]
     split: SplitSpec | None = None
+
+    @field_validator("project_id", "response", "dataset_path", mode="before")
+    @classmethod
+    def strip_and_check_non_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("must not be empty")
+        return v
+
+    @field_validator("family", mode="before")
+    @classmethod
+    def validate_family(cls, v: str) -> str:
+        v = v.strip().lower()
+        if v not in VALID_FAMILIES:
+            raise ValueError(
+                f"invalid family '{v}', must be one of: {sorted(VALID_FAMILIES)}"
+            )
+        return v
 
     # Fit results
     deviance: float | None = None

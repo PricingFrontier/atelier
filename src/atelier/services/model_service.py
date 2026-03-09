@@ -10,9 +10,116 @@ from sqlalchemy.exc import IntegrityError
 from atelier.db.engine import get_session_factory
 from atelier.db.models import Model, Project
 from atelier.schemas import ExploreRequest
+from atelier.schemas.model_save import VersionChange
 
 log = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Spec construction
+# ---------------------------------------------------------------------------
+
+def build_model_spec(
+    *,
+    dataset_path: str,
+    response: str,
+    family: str,
+    link: str | None,
+    offset: str | None,
+    weights: str | None,
+    terms: list[dict],
+    split: dict | None,
+) -> dict[str, Any]:
+    """Build a canonical model spec dict for storage.
+
+    Used by both the save_model API endpoint and save_null_model to ensure
+    consistent spec format.
+    """
+    return {
+        "dataset_path": dataset_path,
+        "response": response,
+        "family": family,
+        "link": link,
+        "offset": offset,
+        "weights": weights,
+        "terms": terms,
+        "split": split,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Term diffing helpers (used by models API for version history)
+# ---------------------------------------------------------------------------
+
+def _term_key(t: dict) -> str:
+    """Unique identity for a term (column + type)."""
+    return f"{t.get('column', '')}::{t.get('type', '')}"
+
+
+def _term_label(t: dict) -> str:
+    """Human-readable label for a term."""
+    col = t.get("column", "?")
+    typ = t.get("type", "?")
+    extras = []
+    if t.get("df") is not None:
+        extras.append(f"df={t['df']}")
+    if t.get("k") is not None:
+        extras.append(f"k={t['k']}")
+    if t.get("monotonicity"):
+        extras.append(t["monotonicity"])
+    suffix = f", {', '.join(extras)}" if extras else ""
+    return f"{col} ({typ}{suffix})"
+
+
+def _term_params(t: dict) -> dict:
+    """Extract tunable params for modification detection."""
+    return {
+        "df": t.get("df"),
+        "k": t.get("k"),
+        "monotonicity": t.get("monotonicity"),
+        "expr": t.get("expr"),
+    }
+
+
+def compute_changes(
+    prev_terms: list[dict], curr_terms: list[dict]
+) -> list[VersionChange]:
+    """Diff two term lists and return a list of changes."""
+    prev_map = {_term_key(t): t for t in prev_terms}
+    curr_map = {_term_key(t): t for t in curr_terms}
+
+    changes: list[VersionChange] = []
+
+    # Added
+    for key in curr_map:
+        if key not in prev_map:
+            changes.append(
+                VersionChange(kind="added", description=f"+ {_term_label(curr_map[key])}")
+            )
+
+    # Removed
+    for key in prev_map:
+        if key not in curr_map:
+            changes.append(
+                VersionChange(kind="removed", description=f"− {_term_label(prev_map[key])}")
+            )
+
+    # Modified (same column+type but different params)
+    for key in curr_map:
+        if key in prev_map and _term_params(curr_map[key]) != _term_params(prev_map[key]):
+            changes.append(
+                VersionChange(
+                    kind="modified",
+                    description=f"~ {_term_label(curr_map[key])}",
+                )
+            )
+
+    return changes
+
+
+# ---------------------------------------------------------------------------
+# Null model persistence
+# ---------------------------------------------------------------------------
 
 async def save_null_model(
     *,
@@ -54,20 +161,22 @@ async def save_null_model(
             except Exception as exc:
                 log.debug("[model_service] null aic() failed: %s", exc)
 
+            spec = build_model_spec(
+                dataset_path=req.dataset_path,
+                response=req.response,
+                family=req.family,
+                link=req.link,
+                offset=req.offset,
+                weights=req.weights,
+                terms=[],
+                split=req.split.model_dump() if req.split else None,
+            )
+
             null_model_row = Model(
                 project_id=project_id,
                 version=1,
                 name="v1",
-                spec={
-                    "dataset_path": req.dataset_path,
-                    "response": req.response,
-                    "family": req.family,
-                    "link": req.link,
-                    "offset": req.offset,
-                    "weights": req.weights,
-                    "terms": [],
-                    "split": req.split.model_dump() if req.split else None,
-                },
+                spec=spec,
                 status="fitted",
                 deviance=null_dev,
                 null_deviance=null_dev,

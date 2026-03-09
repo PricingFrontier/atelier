@@ -1,6 +1,7 @@
 import logging
 from collections.abc import AsyncGenerator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from atelier.config import DB_PATH
@@ -21,6 +22,13 @@ def get_engine():
             echo=False,
             connect_args={"check_same_thread": False},
         )
+
+        @event.listens_for(_engine.sync_engine, "connect")
+        def set_sqlite_pragma(dbapi_conn, connection_record):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
         log.debug("[db/engine] engine created successfully")
     return _engine
 

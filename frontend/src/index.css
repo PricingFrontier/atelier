@@ -52,10 +52,6 @@ body {
   to { opacity: 1; }
 }
 
-@keyframes drawLine {
-  to { stroke-dashoffset: 0; }
-}
-
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -81,7 +77,7 @@ body {
   to { opacity: 1; transform: translateX(0); }
 }
 
-/* Staggered animation delays */
+/* Staggered animation delays — legacy numbered classes (kept for compatibility) */
 .fade-up-stagger-1 { animation: fadeUp 0.3s ease-out 0.03s both; }
 .fade-up-stagger-2 { animation: fadeUp 0.3s ease-out 0.06s both; }
 .fade-up-stagger-3 { animation: fadeUp 0.3s ease-out 0.09s both; }
@@ -97,6 +93,12 @@ body {
 .fade-up-stagger-13 { animation: fadeUp 0.3s ease-out 0.39s both; }
 .fade-up-stagger-14 { animation: fadeUp 0.3s ease-out 0.42s both; }
 .fade-up-stagger-15 { animation: fadeUp 0.3s ease-out 0.45s both; }
+
+/* CSS custom property approach — use style={{ '--stagger-index': i }} with className="fade-up-stagger" */
+.fade-up-stagger {
+  animation: fadeUp 0.3s ease-out both;
+  animation-delay: calc(var(--stagger-index, 0) * 0.03s);
+}
 
 /* Coefficient row animation (no per-row delay) */
 .fade-up-coeff { animation: fadeUp 0.2s ease-out both; }

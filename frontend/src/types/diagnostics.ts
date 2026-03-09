@@ -106,7 +106,7 @@ export interface FactorDiagnostic {
   coefficients: FactorCoefficient[] | null;
   actual_vs_expected: ActualVsExpected[];
   residual_pattern: ResidualPattern | null;
-  univariate: any | null;
+  univariate: Record<string, number> | null;
   significance: FactorSignificance | null;
   score_test: ScoreTest | null;
   relative_importance: number | null;
@@ -258,6 +258,15 @@ export interface FactorDivergenceEntry {
   ae_diff: number;
 }
 
+/* ── Interaction candidate ──────────────────────────── */
+export interface InteractionCandidate {
+  factors?: string;
+  factor1?: string;
+  factor2?: string;
+  statistic?: number;
+  pvalue?: number;
+}
+
 /* ── Full diagnostics response ───────────────────────── */
 export interface DiagnosticsData {
   model_summary: ModelSummaryData;
@@ -275,11 +284,11 @@ export interface DiagnosticsData {
   calibration?: CalibrationData;
   residual_summary?: ResidualSummary;
   factors?: FactorDiagnostic[];
-  interaction_candidates?: any[];
+  interaction_candidates?: InteractionCandidate[];
   model_comparison?: ModelComparison;
   warnings?: DiagnosticWarning[];
   vif?: VifEntry[];
-  smooth_terms?: any;
+  smooth_terms?: Record<string, unknown>;
   coefficient_summary?: CoefficientSummaryEntry[];
   factor_deviance?: FactorDeviance[];
   lift_chart?: LiftChart;
@@ -299,7 +308,7 @@ export interface FitResult {
   aic: number | null;
   bic: number | null;
   family: string;
-  link: string;
+  link: string | null;
   n_terms: number;
   n_params: number;
   diagnostics: DiagnosticsData | null;

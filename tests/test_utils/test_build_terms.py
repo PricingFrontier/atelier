@@ -1,6 +1,6 @@
 """Tests for _build_terms_dict — converts TermSpec list to rustystats dict."""
 
-from atelier.api.fit import _build_terms_dict
+from atelier.services.term_service import build_terms_dict as _build_terms_dict
 from atelier.schemas import TermSpec
 
 

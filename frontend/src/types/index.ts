@@ -13,6 +13,7 @@ export type {
   MainTab,
   SplitMetrics,
   ModelSummary,
+  ModelDetailResponse,
   MenuPos,
   MenuItem,
 } from "./model";
@@ -30,6 +31,7 @@ export type {
   CorrelationData,
   ZeroInflation,
   ExploreOverdispersion,
+  UnivariateTestResult,
 } from "./exploration";
 
 export type {
@@ -57,6 +59,7 @@ export type {
   OverdispersionData,
   DecileComparison,
   FactorDivergenceEntry,
+  InteractionCandidate,
   DiagnosticsData,
   FitResult,
 } from "./diagnostics";

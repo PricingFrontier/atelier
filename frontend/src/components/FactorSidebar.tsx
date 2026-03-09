@@ -422,6 +422,7 @@ const FactorRow = memo(function FactorRow({
                 </span>
                 <button
                   onClick={() => onRemoveTerm(term.column, term.type, term.expr)}
+                  aria-label="Remove term"
                   className="rounded p-0.5 text-muted-foreground/0 transition-colors group-hover/term:text-muted-foreground/30 hover:!text-destructive"
                 >
                   <X className="h-3 w-3" />

@@ -2428,10 +2428,10 @@
     "factor_divergence": {
       "VehPower": [
         {
-          "level": "11.0",
-          "train_ae": 1.0992,
-          "test_ae": 0.9298,
-          "ae_diff": 0.1694
+          "level": "15.0",
+          "train_ae": 0.973,
+          "test_ae": 0.8372,
+          "ae_diff": 0.1358
         },
         {
           "level": "13.0",
@@ -2440,25 +2440,19 @@
           "ae_diff": 0.2154
         },
         {
-          "level": "15.0",
-          "train_ae": 0.973,
-          "test_ae": 0.8372,
-          "ae_diff": 0.1358
-        },
-        {
           "level": "9.0",
           "train_ae": 1.1603,
           "test_ae": 1.0525,
           "ae_diff": 0.1078
+        },
+        {
+          "level": "11.0",
+          "train_ae": 1.0992,
+          "test_ae": 0.9298,
+          "ae_diff": 0.1694
         }
       ],
       "VehBrand": [
-        {
-          "level": "B3",
-          "train_ae": 1.0227,
-          "test_ae": 0.9177,
-          "ae_diff": 0.105
-        },
         {
           "level": "B14",
           "train_ae": 0.7325,
@@ -2470,32 +2464,20 @@
           "train_ae": 0.9041,
           "test_ae": 1.0262,
           "ae_diff": 0.1221
+        },
+        {
+          "level": "B3",
+          "train_ae": 1.0227,
+          "test_ae": 0.9177,
+          "ae_diff": 0.105
         }
       ],
       "Region": [
         {
-          "level": "Franche-Comte",
-          "train_ae": 1.1791,
-          "test_ae": 0.6404,
-          "ae_diff": 0.5387
-        },
-        {
-          "level": "Champagne-Ardenne",
-          "train_ae": 1.4599,
-          "test_ae": 1.2913,
-          "ae_diff": 0.1686
-        },
-        {
-          "level": "Pays-de-la-Loire",
-          "train_ae": 0.94,
-          "test_ae": 0.8347,
-          "ae_diff": 0.1053
-        },
-        {
-          "level": "Picardie",
-          "train_ae": 1.262,
-          "test_ae": 0.863,
-          "ae_diff": 0.399
+          "level": "Midi-Pyrenees",
+          "train_ae": 0.9153,
+          "test_ae": 1.0169,
+          "ae_diff": 0.1016
         },
         {
           "level": "Auvergne",
@@ -2504,16 +2486,16 @@
           "ae_diff": 0.2719
         },
         {
-          "level": "Midi-Pyrenees",
-          "train_ae": 0.9153,
-          "test_ae": 1.0169,
-          "ae_diff": 0.1016
-        },
-        {
           "level": "Limousin",
           "train_ae": 1.1364,
           "test_ae": 0.833,
           "ae_diff": 0.3034
+        },
+        {
+          "level": "Franche-Comte",
+          "train_ae": 1.1791,
+          "test_ae": 0.6404,
+          "ae_diff": 0.5387
         },
         {
           "level": "Alsace",
@@ -2522,32 +2504,50 @@
           "ae_diff": 0.1996
         },
         {
+          "level": "Pays-de-la-Loire",
+          "train_ae": 0.94,
+          "test_ae": 0.8347,
+          "ae_diff": 0.1053
+        },
+        {
           "level": "Corse",
           "train_ae": 1.4158,
           "test_ae": 1.5727,
           "ae_diff": 0.1569
+        },
+        {
+          "level": "Picardie",
+          "train_ae": 1.262,
+          "test_ae": 0.863,
+          "ae_diff": 0.399
+        },
+        {
+          "level": "Champagne-Ardenne",
+          "train_ae": 1.4599,
+          "test_ae": 1.2913,
+          "ae_diff": 0.1686
         }
       ]
     },
     "overfitting_risk": false,
     "calibration_drift": false,
     "unstable_factors": [
-      "VehPower[11.0]",
-      "VehPower[13.0]",
       "VehPower[15.0]",
+      "VehPower[13.0]",
       "VehPower[9.0]",
-      "VehBrand[B3]",
+      "VehPower[11.0]",
       "VehBrand[B14]",
       "VehBrand[B4]",
-      "Region[Franche-Comte]",
-      "Region[Champagne-Ardenne]",
-      "Region[Pays-de-la-Loire]",
-      "Region[Picardie]",
-      "Region[Auvergne]",
+      "VehBrand[B3]",
       "Region[Midi-Pyrenees]",
+      "Region[Auvergne]",
       "Region[Limousin]",
+      "Region[Franche-Comte]",
       "Region[Alsace]",
-      "Region[Corse]"
+      "Region[Pays-de-la-Loire]",
+      "Region[Corse]",
+      "Region[Picardie]",
+      "Region[Champagne-Ardenne]"
     ]
   },
   "calibration": {
@@ -3934,15 +3934,15 @@
     },
     {
       "type": "problem_factor_levels",
-      "message": "Factor 'VehBrand' has problem levels with poor fit: B14, B12"
+      "message": "Factor 'VehBrand' has problem levels with poor fit: B12, B14"
     },
     {
       "type": "problem_factor_levels",
-      "message": "Factor 'Area' has problem levels with poor fit: F, E, A"
+      "message": "Factor 'Area' has problem levels with poor fit: A, F, E"
     },
     {
       "type": "problem_factor_levels",
-      "message": "Factor 'Region' has problem levels with poor fit: Corse, Alsace, Champagne-Ardenne, Picardie, Ile-de-France..."
+      "message": "Factor 'Region' has problem levels with poor fit: Corse, Picardie, Champagne-Ardenne, Ile-de-France, Franche-Comte..."
     },
     {
       "type": "weak_discrimination",
@@ -3950,7 +3950,7 @@
     },
     {
       "type": "unstable_factors",
-      "message": "Unstable factor levels (train/test A/E differ by >0.1): VehPower[11.0], VehPower[13.0], VehPower[15.0], VehPower[9.0], VehBrand[B3], VehBrand[B14], VehBrand[B4], Region[Franche-Comte], Region[Champagne-Ardenne], Region[Pays-de-la-Loire]..."
+      "message": "Unstable factor levels (train/test A/E differ by >0.1): VehPower[15.0], VehPower[13.0], VehPower[9.0], VehPower[11.0], VehBrand[B14], VehBrand[B4], VehBrand[B3], Region[Midi-Pyrenees], Region[Auvergne], Region[Limousin]..."
     },
     {
       "type": "overdispersion",
@@ -4206,8 +4206,8 @@
         }
       ],
       "problem_levels": [
-        "B14",
-        "B12"
+        "B12",
+        "B14"
       ]
     },
     {
@@ -4295,9 +4295,9 @@
         }
       ],
       "problem_levels": [
+        "A",
         "F",
-        "E",
-        "A"
+        "E"
       ]
     },
     {
@@ -4496,11 +4496,11 @@
       ],
       "problem_levels": [
         "Corse",
-        "Alsace",
-        "Champagne-Ardenne",
         "Picardie",
+        "Champagne-Ardenne",
         "Ile-de-France",
-        "Franche-Comte"
+        "Franche-Comte",
+        "Alsace"
       ]
     }
   ],

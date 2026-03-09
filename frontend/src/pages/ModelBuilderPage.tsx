@@ -11,9 +11,6 @@ import {
   Activity,
   ShieldCheck,
   Code2,
-  Copy,
-  Check,
-  CheckCircle2,
   Clock,
   X,
 } from "lucide-react";
@@ -34,6 +31,9 @@ import type { FactorBadge } from "@/components/FactorSidebar";
 import FactorSidebar from "@/components/FactorSidebar";
 import HistoryPanel from "@/components/HistoryPanel";
 import FittingOverlay from "@/components/FittingOverlay";
+import FitBanner from "@/components/FitBanner";
+import type { FitBannerState } from "@/components/FitBanner";
+import CodePanel from "@/components/CodePanel";
 
 const FactorChartsPanel = lazy(() => import("@/components/charts/FactorChartsPanel"));
 const FactorOverview = lazy(() => import("@/components/FactorOverview"));
@@ -116,14 +116,6 @@ function serializeTerms(terms: TermSpec[]) {
     monotonicity: t.monotonicity ?? null,
     expr: t.expr ?? null,
   }));
-}
-
-/** Banner state after a successful fit */
-interface FitBannerState {
-  terms: TermSpec[];
-  result: FitResult;
-  prevResult: FitResult | null;
-  prevTerms: TermSpec[];
 }
 
 const TAG = "ModelBuilder";
@@ -430,6 +422,18 @@ export default function ModelBuilderPage() {
     setActiveTab("factors");
   }, []);
 
+  const dismissFitBanner = useCallback(() => setFitBanner(null), []);
+
+  const handleSelectFactor = useCallback((name: string) => {
+    setSelectedFactor(name);
+  }, []);
+
+  // Memoize diagnostics fallback for FactorOverview to avoid new object identity each render
+  const factorOverviewDiagnostics = useMemo(
+    () => fitResult?.diagnostics ?? exploration?.null_diagnostics ?? null,
+    [fitResult?.diagnostics, exploration?.null_diagnostics],
+  );
+
   if (!config) {
     log.warn(TAG, "no config in location.state — redirecting to /new");
     return (
@@ -567,7 +571,7 @@ export default function ModelBuilderPage() {
           )}
 
           {/* Fit banner */}
-          {fitBanner && <FitBanner banner={fitBanner} onDismiss={() => setFitBanner(null)} />}
+          {fitBanner && <FitBanner banner={fitBanner} onDismiss={dismissFitBanner} />}
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
@@ -634,12 +638,10 @@ export default function ModelBuilderPage() {
             ) : activeTab === "factors" && !selectedFactor ? (
               <Suspense fallback={<TabFallback />}>
                 <FactorOverview
-                  diagnostics={fitResult?.diagnostics ?? exploration?.null_diagnostics ?? null}
+                  diagnostics={factorOverviewDiagnostics}
                   exploration={exploration}
                   terms={terms}
-                  onSelectFactor={(name: string) => {
-                    setSelectedFactor(name);
-                  }}
+                  onSelectFactor={handleSelectFactor}
                 />
               </Suspense>
             ) : (
@@ -685,239 +687,6 @@ export default function ModelBuilderPage() {
   );
 }
 
-/* ---- Fit banner ---- */
-
-function FitBanner({ banner, onDismiss }: { banner: FitBannerState; onDismiss: () => void }) {
-  const { result, prevResult, prevTerms, terms: bannerTerms } = banner;
-
-  // Compute term changes
-  const termChanges = useMemo(() => {
-    const prevSet = new Set(prevTerms.map((t) => `${t.column}:${t.type}`));
-    const currSet = new Set(bannerTerms.map((t) => `${t.column}:${t.type}`));
-
-    const added: string[] = [];
-    const removed: string[] = [];
-
-    for (const t of bannerTerms) {
-      const key = `${t.column}:${t.type}`;
-      if (!prevSet.has(key)) {
-        const typeLabel = t.type === "bs" ? `BS${t.df ?? ""}` : t.type === "ns" ? `NS${t.df ?? ""}` : t.type.charAt(0).toUpperCase() + t.type.slice(1);
-        added.push(`+${t.column}(${typeLabel})`);
-      }
-    }
-    for (const t of prevTerms) {
-      const key = `${t.column}:${t.type}`;
-      if (!currSet.has(key)) {
-        removed.push(`-${t.column}`);
-      }
-    }
-
-    return [...added, ...removed];
-  }, [bannerTerms, prevTerms]);
-
-  // Compute deltas
-  const devDelta = useMemo(() => {
-    if (result.deviance == null || prevResult?.deviance == null) return null;
-    if (prevResult.deviance === 0) return null;
-    return ((result.deviance - prevResult.deviance) / Math.abs(prevResult.deviance)) * 100;
-  }, [result.deviance, prevResult?.deviance]);
-
-  const aicDelta = useMemo(() => {
-    if (result.aic == null || prevResult?.aic == null) return null;
-    return result.aic - prevResult.aic;
-  }, [result.aic, prevResult?.aic]);
-
-  const giniDelta = useMemo(() => {
-    const currGini = result.diagnostics?.train_test?.train?.gini;
-    const prevGini = prevResult?.diagnostics?.train_test?.train?.gini;
-    if (currGini == null || prevGini == null) return null;
-    return currGini - prevGini;
-  }, [result.diagnostics, prevResult?.diagnostics]);
-
-  return (
-    <div
-      className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2 text-[0.75rem]"
-      style={{ animation: "fadeUp 0.3s ease-out both" }}
-    >
-      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-      <span className="text-emerald-400 font-medium">Fit complete</span>
-
-      {termChanges.length > 0 && (
-        <>
-          <span className="text-muted-foreground/30">&middot;</span>
-          <span className="text-foreground/70">{termChanges.join(", ")}</span>
-        </>
-      )}
-
-      {devDelta != null && (
-        <>
-          <span className="text-muted-foreground/30">&middot;</span>
-          <span className="text-muted-foreground/50">Dev</span>
-          <DeltaValue value={devDelta} suffix="%" invert />
-        </>
-      )}
-
-      {aicDelta != null && (
-        <>
-          <span className="text-muted-foreground/30">&middot;</span>
-          <span className="text-muted-foreground/50">AIC</span>
-          <DeltaValue value={aicDelta} invert />
-        </>
-      )}
-
-      {giniDelta != null && (
-        <>
-          <span className="text-muted-foreground/30">&middot;</span>
-          <span className="text-muted-foreground/50">Gini</span>
-          <DeltaValue value={giniDelta} dp={4} />
-        </>
-      )}
-
-      <span className="text-muted-foreground/30">&middot;</span>
-      <span className="text-muted-foreground/50">{result.fit_duration_ms}ms</span>
-
-      <button
-        onClick={onDismiss}
-        className="ml-auto text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-}
-
-/** Small inline delta display: green for improvements, red for regressions */
-function DeltaValue({ value, suffix, dp = 1, invert = false }: { value: number; suffix?: string; dp?: number; invert?: boolean }) {
-  // invert=true means negative values are good (deviance, AIC going down)
-  const isGood = invert ? value < 0 : value > 0;
-  const sign = value > 0 ? "+" : "";
-  const formatted = `${sign}${value.toFixed(dp)}${suffix ?? ""}`;
-
-  return (
-    <span className={cn("font-mono", isGood ? "text-emerald-400" : "text-red-400")}>
-      {formatted}
-    </span>
-  );
-}
-
-/* ---- Code generation panel ---- */
-
-function generateRustystatsCode(config: ModelConfig, terms: TermSpec[]): string {
-  const lines: string[] = [
-    "import polars as pl",
-    "import rustystats as rs",
-    "",
-    `df = pl.read_csv("${config.datasetPath?.split("/").pop() ?? "data.csv"}")`,
-    "",
-  ];
-
-  // Build terms dict
-  const termEntries: string[] = [];
-  const seen = new Map<string, number>();
-
-  for (const t of terms) {
-    const parts: string[] = [`"type": "${t.type}"`];
-    if (t.df != null) parts.push(`"df": ${t.df}`);
-    if (t.k != null) parts.push(`"k": ${t.k}`);
-    if (t.monotonicity) parts.push(`"monotonicity": "${t.monotonicity}"`);
-    if (t.type === "expression" && t.expr) parts.push(`"expr": "${t.expr}"`);
-
-    let key: string;
-    if (t.type === "expression") {
-      key = t.expr ?? t.column;
-    } else {
-      const count = seen.get(t.column) ?? 0;
-      if (count > 0 && (t.type === "target_encoding" || t.type === "frequency_encoding")) {
-        key = `${t.column}__${t.type}`;
-        parts.push(`"variable": "${t.column}"`);
-      } else {
-        key = t.column;
-      }
-      seen.set(t.column, count + 1);
-    }
-
-    termEntries.push(`    "${key}": {${parts.join(", ")}}`);
-  }
-
-  lines.push("terms = {");
-  lines.push(termEntries.join(",\n"));
-  lines.push("}");
-  lines.push("");
-
-  // Build glm_dict call
-  const kwargs: string[] = [
-    `    response="${config.response}"`,
-    "    terms=terms",
-    "    data=df",
-    `    family="${config.family}"`,
-  ];
-  if (config.link && config.link !== "canonical") {
-    kwargs.push(`    link="${config.link}"`);
-  }
-  if (config.offset) {
-    kwargs.push(`    offset="${config.offset}"`);
-  }
-  if (config.weights) {
-    kwargs.push(`    weights="${config.weights}"`);
-  }
-
-  lines.push("model = rs.glm_dict(");
-  lines.push(kwargs.join(",\n") + ",");
-  lines.push(")");
-  lines.push("");
-  lines.push("result = model.fit()");
-  lines.push("print(result.summary())");
-
-  return lines.join("\n");
-}
-
-function CodePanel({ config, terms }: { config: ModelConfig; terms: TermSpec[] }) {
-  const [copied, setCopied] = useState(false);
-  const code = useMemo(() => generateRustystatsCode(config, terms), [config, terms]);
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [code]);
-
-  return (
-    <div className="flex-1 overflow-y-auto p-6" style={{ animation: "fadeUp 0.4s ease-out both" }}>
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
-            <Code2 className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">rustystats Code</p>
-            <p className="text-[0.7rem] text-muted-foreground/50">
-              Python code to reproduce this model
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleCopy}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-            copied
-              ? "bg-emerald-500/10 text-emerald-400"
-              : "bg-accent text-muted-foreground hover:bg-surface-active hover:text-foreground"
-          )}
-        >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-      <div className="rounded-xl border border-border bg-background p-5">
-        <pre className="overflow-x-auto font-mono text-[0.8rem] leading-relaxed text-foreground/80">
-          <code>{code}</code>
-        </pre>
-      </div>
-    </div>
-  );
-}
-
 function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
     <button
@@ -934,7 +703,6 @@ function TabButton({ active, onClick, icon, label }: { active: boolean; onClick:
     </button>
   );
 }
-
 
 function ConfigPill({ label, value }: { label: string; value: string }) {
   return (

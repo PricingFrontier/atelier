@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 import threading
@@ -13,13 +12,18 @@ from atelier.app import configure_logging
 def _open_browser(url: str) -> None:
     """Open *url* in the default browser, suppressing noisy stderr from helpers like gio."""
     try:
-        devnull = open(os.devnull, "w")
         if sys.platform == "linux":
             subprocess.Popen(
-                ["xdg-open", url], stdout=devnull, stderr=devnull
+                ["xdg-open", url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         elif sys.platform == "darwin":
-            subprocess.Popen(["open", url], stdout=devnull, stderr=devnull)
+            subprocess.Popen(
+                ["open", url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         else:
             webbrowser.open(url)
     except Exception:

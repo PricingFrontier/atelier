@@ -9,55 +9,14 @@ from typing import Any
 import rustystats as rs
 from fastapi import APIRouter, HTTPException
 
-from atelier.schemas import FitRequest, TermSpec
-from atelier.api._json_utils import sanitize_floats
+from atelier.schemas import FitRequest
+from atelier.api._json_utils import safe_extract, sanitize_floats
 from atelier.services.dataset_service import apply_split, classify_columns, load_dataframe
+from atelier.services.term_service import build_terms_dict
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["fit"])
-
-
-_VARIABLE_AWARE_TYPES = {"target_encoding", "frequency_encoding"}
-
-
-def _build_terms_dict(terms: list[TermSpec]) -> dict[str, dict[str, Any]]:
-    """Convert list of TermSpec to rustystats terms dict."""
-    result: dict[str, dict[str, Any]] = {}
-
-    for t in terms:
-        spec: dict[str, Any] = {"type": t.type}
-
-        if t.df is not None:
-            spec["df"] = t.df
-        if t.k is not None:
-            spec["k"] = t.k
-        if t.monotonicity is not None:
-            spec["monotonicity"] = t.monotonicity
-        if t.type == "expression" and t.expr is not None:
-            spec["expr"] = t.expr
-
-        # For expressions, use a unique key
-        if t.type == "expression":
-            key = t.expr or t.column
-        elif t.column in result and t.type in _VARIABLE_AWARE_TYPES:
-            # Same column already has a term — use a unique key with
-            # the 'variable' field so rustystats resolves the column
-            key = f"{t.column}__{t.type}"
-            spec["variable"] = t.column
-        elif t.column in result and result[t.column]["type"] in _VARIABLE_AWARE_TYPES:
-            # Existing entry is an encoding type — re-key it so we can
-            # use the plain column name for the new (non-encoding) term
-            existing = result.pop(t.column)
-            existing["variable"] = t.column
-            result[f"{t.column}__{existing['type']}"] = existing
-            key = t.column
-        else:
-            key = t.column
-
-        result[key] = spec
-
-    return result
 
 
 @router.post("/fit")
@@ -84,12 +43,12 @@ async def fit_model(req: FitRequest):
     )
 
     # Build terms dict
-    terms_dict = _build_terms_dict(req.terms)
+    terms_dict = build_terms_dict(req.terms)
     log.debug("[fit] built terms_dict with %d entries: %s", len(terms_dict), list(terms_dict.keys()))
 
     if not terms_dict:
         log.warning("[fit] rejected: no terms specified")
-        raise HTTPException(400, "No terms specified")
+        raise HTTPException(status_code=400, detail="No terms specified")
 
     # Build kwargs
     kwargs: dict[str, Any] = {
@@ -110,10 +69,10 @@ async def fit_model(req: FitRequest):
     t0 = time.perf_counter()
     try:
         result = rs.glm_dict(**kwargs).fit()
-    except Exception as e:
+    except Exception as exc:
         fit_ms = int((time.perf_counter() - t0) * 1000)
-        log.error("[fit] rs.glm_dict().fit() FAILED after %dms: %s", fit_ms, e, exc_info=True)
-        raise HTTPException(422, f"Model fit failed: {e}")
+        log.error("[fit] rs.glm_dict().fit() FAILED after %dms: %s", fit_ms, exc, exc_info=True)
+        raise HTTPException(status_code=422, detail=f"Model fit failed: {exc}")
     fit_ms = int((time.perf_counter() - t0) * 1000)
     log.info("[fit] model fit completed in %dms", fit_ms)
 
@@ -125,21 +84,9 @@ async def fit_model(req: FitRequest):
     params = result.params
     feature_names = result.feature_names
     log.info("[fit] model has %d parameters / features", len(feature_names))
-    try:
-        se = result.bse()
-    except Exception as exc:
-        log.debug("[fit] bse() failed: %s", exc)
-        se = [None] * len(params)
-    try:
-        tvals = result.tvalues()
-    except Exception as exc:
-        log.debug("[fit] tvalues() failed: %s", exc)
-        tvals = [None] * len(params)
-    try:
-        pvals = result.pvalues()
-    except Exception as exc:
-        log.debug("[fit] pvalues() failed: %s", exc)
-        pvals = [None] * len(params)
+    se = safe_extract(result, "bse", default=[None] * len(params))
+    tvals = safe_extract(result, "tvalues", default=[None] * len(params))
+    pvals = safe_extract(result, "pvalues", default=[None] * len(params))
 
     coef_table = []
     for i, name in enumerate(feature_names):
@@ -154,26 +101,10 @@ async def fit_model(req: FitRequest):
     log.debug("[fit] coefficient table built with %d rows", len(coef_table))
 
     # Diagnostics
-    try:
-        deviance = float(result.deviance)
-    except Exception as exc:
-        log.debug("[fit] deviance extraction failed: %s", exc)
-        deviance = None
-    try:
-        null_deviance = float(result.null_deviance())
-    except Exception as exc:
-        log.debug("[fit] null_deviance() failed: %s", exc)
-        null_deviance = None
-    try:
-        aic = float(result.aic())
-    except Exception as exc:
-        log.debug("[fit] aic() failed: %s", exc)
-        aic = None
-    try:
-        bic = float(result.bic())
-    except Exception as exc:
-        log.debug("[fit] bic() failed: %s", exc)
-        bic = None
+    deviance = safe_extract(result, "deviance", converter=float)
+    null_deviance = safe_extract(result, "null_deviance", converter=float)
+    aic = safe_extract(result, "aic", converter=float)
+    bic = safe_extract(result, "bic", converter=float)
 
     log.info(
         "[fit] metrics: deviance=%s  null_deviance=%s  aic=%s  bic=%s",
@@ -236,4 +167,5 @@ async def fit_model(req: FitRequest):
         "n_terms": len(terms_dict),
         "n_params": len(feature_names),
         "diagnostics": diagnostics_json,
+        "diagnostics_status": "ok" if diagnostics_json else "failed",
     })

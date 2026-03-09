@@ -25,7 +25,7 @@ def load_dataframe(path: Path) -> pl.DataFrame:
     log.info("[load_dataframe] path=%s  exists=%s  suffix=%s", path, path.exists(), path.suffix)
     if not path.exists():
         log.error("[load_dataframe] dataset file not found: %s", path)
-        raise HTTPException(400, f"Dataset not found: {path}")
+        raise HTTPException(status_code=400, detail=f"Dataset not found: {path}")
     try:
         if path.suffix == ".parquet":
             df = pl.read_parquet(path)
@@ -42,9 +42,9 @@ def load_dataframe(path: Path) -> pl.DataFrame:
         log.info("[load_dataframe] loaded %d rows x %d cols from %s", df.height, df.width, path.name)
         log.debug("[load_dataframe] dtypes: %s", {c: str(df[c].dtype) for c in df.columns})
         return df
-    except Exception as e:
-        log.error("[load_dataframe] failed to read %s: %s", path, e, exc_info=True)
-        raise HTTPException(400, f"Failed to read dataset: {e}")
+    except Exception as exc:
+        log.error("[load_dataframe] failed to read %s: %s", path, exc, exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Failed to read dataset: {exc}")
 
 
 def load_column(path: Path, column: str) -> pl.Series:
@@ -52,18 +52,18 @@ def load_column(path: Path, column: str) -> pl.Series:
     log.info("[load_column] path=%s  column=%s", path, column)
     if not path.exists():
         log.error("[load_column] dataset file not found: %s", path)
-        raise HTTPException(400, f"Dataset not found: {path}")
+        raise HTTPException(status_code=400, detail=f"Dataset not found: {path}")
     try:
         if path.suffix == ".parquet":
             df = pl.read_parquet(path, columns=[column])
         else:
             df = pl.read_csv(path, columns=[column])
-    except Exception as e:
-        log.error("[load_column] failed to read column '%s' from %s: %s", column, path, e, exc_info=True)
-        raise HTTPException(400, f"Failed to read column: {e}")
+    except Exception as exc:
+        log.error("[load_column] failed to read column '%s' from %s: %s", column, path, exc, exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Failed to read column: {exc}")
     if column not in df.columns:
         log.error("[load_column] column '%s' not found in %s  available=%s", column, path, df.columns)
-        raise HTTPException(400, f"Column '{column}' not found")
+        raise HTTPException(status_code=400, detail=f"Column '{column}' not found")
     log.debug("[load_column] loaded column '%s': dtype=%s  len=%d  nulls=%d", column, df[column].dtype, len(df[column]), df[column].null_count())
     return df[column]
 

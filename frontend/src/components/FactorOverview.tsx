@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fmt, pFmt } from "@/lib/formatting";
 import { TERM_COLORS } from "@/types";
 import type {
   DiagnosticsData,
@@ -24,7 +25,7 @@ import type {
   TermSpec,
   TermType,
   ExploreFactorStat,
-
+  InteractionCandidate,
   CatDiagLevel,
   ContDiagBand,
 } from "@/types";
@@ -62,11 +63,6 @@ interface CandidateRow {
 function pctFmt(v: number | null | undefined): string {
   if (v == null) return "\u2014";
   return `${v.toFixed(2)}%`;
-}
-
-function numFmt(v: number | null | undefined, dp: number): string {
-  if (v == null) return "\u2014";
-  return v.toFixed(dp);
 }
 
 function aeRange(levels: CatDiagLevel[] | ContDiagBand[] | null | undefined): { min: number; max: number } | null {
@@ -253,7 +249,7 @@ export default memo(function FactorOverview({ diagnostics, exploration, terms, o
                       </td>
                       <td className="px-3 py-2 text-right font-mono text-[0.75rem] text-foreground/70">
                         {row.aeMin != null && row.aeMax != null
-                          ? `${numFmt(row.aeMin, 3)}\u2013${numFmt(row.aeMax, 3)}`
+                          ? `${fmt(row.aeMin, 3)}\u2013${fmt(row.aeMax, 3)}`
                           : "\u2014"}
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -312,10 +308,10 @@ export default memo(function FactorOverview({ diagnostics, exploration, terms, o
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right font-mono text-[0.75rem] text-foreground/70">
-                      {numFmt(row.scoreStat, 2)}
+                      {fmt(row.scoreStat, 2)}
                     </td>
                     <td className="px-3 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">
-                      {row.scoreP < 0.0001 ? "<0.0001" : numFmt(row.scoreP, 4)}
+                      {pFmt(row.scoreP)}
                     </td>
                     <td className="px-3 py-2 text-[0.75rem] text-muted-foreground/60">
                       {row.shape?.replace(/_/g, " ") ?? "\u2014"}
@@ -359,21 +355,17 @@ export default memo(function FactorOverview({ diagnostics, exploration, terms, o
                     </tr>
                   </thead>
                   <tbody>
-                    {interactions.map((ix: Record<string, unknown>, i: number) => (
+                    {interactions.map((ix: InteractionCandidate, i: number) => (
                       <tr key={i} className="border-b border-border/50">
                         <td className="px-3 py-2 font-mono text-[0.75rem] text-foreground/80">
                           {String(ix.factor1 ?? ix.factors ?? "")}
                           {ix.factor2 ? ` \u00d7 ${String(ix.factor2)}` : ""}
                         </td>
                         <td className="px-3 py-2 text-right font-mono text-[0.75rem] text-foreground/70">
-                          {typeof ix.statistic === "number" ? (ix.statistic as number).toFixed(2) : "\u2014"}
+                          {fmt(ix.statistic ?? null, 2)}
                         </td>
                         <td className="px-3 py-2 text-right font-mono text-[0.75rem] text-muted-foreground">
-                          {typeof ix.pvalue === "number"
-                            ? (ix.pvalue as number) < 0.0001
-                              ? "<0.0001"
-                              : (ix.pvalue as number).toFixed(4)
-                            : "\u2014"}
+                          {ix.pvalue != null ? pFmt(ix.pvalue) : "\u2014"}
                         </td>
                       </tr>
                     ))}

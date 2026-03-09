@@ -5,17 +5,10 @@ import { mockExplorationData, mockDiagnosticsData, mockColumns } from "../../../
 import type { ExplorationData, DiagnosticsData, ColumnMeta, FactorDiagnostic } from "../../../types";
 
 // Mock recharts to avoid canvas/SVG rendering issues in jsdom
-vi.mock("recharts", () => ({
-  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
-  ComposedChart: ({ children }: any) => <div data-testid="composed-chart">{children}</div>,
-  Bar: () => <div data-testid="bar" />,
-  Line: () => <div data-testid="line" />,
-  XAxis: () => <div data-testid="x-axis" />,
-  YAxis: () => <div data-testid="y-axis" />,
-  CartesianGrid: () => <div data-testid="cartesian-grid" />,
-  Tooltip: () => <div data-testid="tooltip" />,
-  Legend: () => <div data-testid="legend" />,
-}));
+vi.mock("recharts", async () => {
+  const { rechartsMock } = await import("../../../test/mocks/recharts");
+  return rechartsMock;
+});
 
 const regionCol: ColumnMeta = mockColumns.find((c) => c.name === "region")!;
 const vehicleAgeCol: ColumnMeta = mockColumns.find((c) => c.name === "vehicle_age")!;

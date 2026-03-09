@@ -35,11 +35,12 @@ export default function ContextMenu({
       ref={menuRef}
       style={style}
       className="fixed z-[100] min-w-[180px] rounded-lg border border-border bg-popover p-1 shadow-2xl shadow-black/60"
+      role="menu"
       onClick={(e) => e.stopPropagation()}
     >
       {items.map((item, i) => {
         if (item.separator) {
-          return <div key={`sep-${i}`} className="mx-2 my-1 h-px bg-border" />;
+          return <div key={`sep-${i}`} role="separator" className="mx-2 my-1 h-px bg-border" />;
         }
 
         const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -95,6 +96,7 @@ function ContextMenuItem({
   return (
     <div ref={rowRef} className="relative">
       <button
+        role="menuitem"
         onMouseEnter={() => hasSubmenu && onSubmenu(item.label)}
         onMouseLeave={() => {/* submenu stays open */}}
         onClick={(e) => {
@@ -125,15 +127,17 @@ function ContextMenuItem({
         <div
           className="fixed z-[110] min-w-[200px] rounded-lg border border-border bg-popover p-1 shadow-2xl shadow-black/60"
           style={{ ...getSubmenuStyle(), animation: "fadeUp 0.1s ease-out both" }}
+          role="menu"
           onClick={(e) => e.stopPropagation()}
         >
           {item.submenu!.map((sub, j) => {
             if (sub.separator) {
-              return <div key={`sub-sep-${j}`} className="my-1 h-px bg-border" />;
+              return <div key={`sub-sep-${j}`} role="separator" className="my-1 h-px bg-border" />;
             }
             return (
               <button
                 key={sub.label}
+                role="menuitem"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (sub.action) sub.action();

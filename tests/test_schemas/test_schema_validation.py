@@ -64,10 +64,16 @@ class TestTermSpec:
         t = TermSpec(column="", type="categorical")
         assert t.column == ""
 
-    def test_type_is_free_string(self):
-        """TermSpec type is a free string — any value is accepted at schema level."""
-        t = TermSpec(column="x", type="totally_invalid_type")
-        assert t.type == "totally_invalid_type"
+    def test_invalid_type_rejected(self):
+        """TermSpec type is restricted to known term types."""
+        with pytest.raises(ValidationError):
+            TermSpec(column="x", type="totally_invalid_type")
+
+    def test_all_valid_term_types_accepted(self):
+        """All known term types are accepted."""
+        for tt in ("categorical", "target_encoding", "frequency_encoding", "linear", "bs", "ns", "expression"):
+            t = TermSpec(column="x", type=tt, expr="x+1" if tt == "expression" else None)
+            assert t.type == tt
 
     def test_df_zero(self):
         t = TermSpec(column="x", type="ns", df=0)
@@ -109,10 +115,16 @@ class TestSplitSpec:
         s = SplitSpec(column="Group", mapping={})
         assert s.mapping == {}
 
-    def test_mapping_accepts_any_string_values(self):
-        """Mapping values are free strings, not restricted to train/validation/holdout."""
-        s = SplitSpec(column="Group", mapping={"1": "custom_split_name"})
-        assert s.mapping["1"] == "custom_split_name"
+    def test_mapping_rejects_invalid_values(self):
+        """Mapping values are restricted to train/validation/holdout/None."""
+        with pytest.raises(ValidationError):
+            SplitSpec(column="Group", mapping={"1": "custom_split_name"})
+
+    def test_mapping_accepts_valid_values(self):
+        """Mapping accepts train, validation, holdout, and None."""
+        s = SplitSpec(column="Group", mapping={"1": "train", "2": "validation", "3": "holdout", "4": None})
+        assert s.mapping["1"] == "train"
+        assert s.mapping["4"] is None
 
 
 # ===========================================================================

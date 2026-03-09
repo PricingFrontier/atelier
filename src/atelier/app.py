@@ -8,8 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from atelier.config import ensure_data_dir
-from atelier.db.engine import enable_wal
+from atelier.config import LOGS_DIR, ensure_data_dir
+from atelier.db.engine import enable_wal, get_engine
 from atelier.db.migrations import ensure_schema
 
 log = logging.getLogger("atelier")
@@ -36,7 +36,8 @@ def configure_logging(*, log_to_file: bool = True) -> None:
     handlers: list[logging.Handler] = [console]
 
     if log_to_file:
-        log_path = Path.cwd() / "atelier.log"
+        ensure_data_dir()
+        log_path = LOGS_DIR / "atelier.log"
         file_handler = RotatingFileHandler(
             log_path,
             maxBytes=5 * 1024 * 1024,  # 5 MB per file
@@ -63,7 +64,7 @@ def configure_logging(*, log_to_file: bool = True) -> None:
         uv_logger.propagate = False
 
     if log_to_file:
-        log.info("Logging initialised (level=DEBUG, file=%s)", Path.cwd() / "atelier.log")
+        log.info("Logging initialised (level=DEBUG, file=%s)", LOGS_DIR / "atelier.log")
     else:
         log.info("Logging initialised (level=DEBUG, file=disabled)")
 
@@ -78,6 +79,7 @@ async def lifespan(app: FastAPI):
     await enable_wal()
     log.info("WAL mode enabled — startup complete")
     yield
+    await get_engine().dispose()
     log.info("Atelier shutting down")
 
 
