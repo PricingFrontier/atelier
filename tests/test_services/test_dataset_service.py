@@ -142,15 +142,15 @@ class TestClassifyColumns:
         cat, cont = classify_columns(sample_df, reserved)
         classified = set(cat + cont)
         non_reserved = set(sample_df.columns) - reserved
-        # Every non-reserved column should be classified as either cat or cont
+        # Every non-reserved column should be classified (sample data has low cardinality)
         assert classified == non_reserved
 
     def test_custom_threshold(self, sample_df):
-        """With threshold=2, most integer columns become continuous."""
+        """With threshold=2, most integer columns become continuous and high-cardinality strings are skipped."""
         cat, cont = classify_columns(sample_df, set(), cat_threshold=2)
-        # Region/Area are string type — always categorical regardless of threshold
-        assert "Region" in cat
-        assert "Area" in cat
+        # Region/Area are string type with many unique values — exceed threshold=2, so skipped
+        assert "Region" not in cat
+        assert "Area" not in cat
         # DrivAge has many unique values — should be continuous with any threshold
         assert "DrivAge" in cont
 
@@ -265,9 +265,27 @@ class TestEdgeCases:
         meta = column_meta(df)
         assert meta[0]["n_missing"] == 3
 
-    def test_classify_string_always_categorical(self):
-        """String columns are always categorical regardless of cardinality."""
-        # 100 unique strings — exceeds default threshold but still categorical
+    def test_classify_string_low_cardinality_is_categorical(self):
+        """String columns with cardinality <= threshold are categorical."""
         df = pl.DataFrame({"s": [f"val_{i}" for i in range(100)]})
         cat, cont = classify_columns(df, set())
+        assert "s" in cat
+
+    def test_classify_string_high_cardinality_is_skipped(self):
+        """String columns with cardinality > threshold are not useful as GLM factors."""
+        df = pl.DataFrame({"s": [f"val_{i}" for i in range(301)]})
+        cat, cont = classify_columns(df, set())
+        assert "s" not in cat
+        assert "s" not in cont
+
+    def test_classify_categorical_dtype_always_categorical(self):
+        """pl.Categorical columns are always categorical regardless of cardinality."""
+        df = pl.DataFrame({"c": [f"val_{i}" for i in range(500)]}).cast({"c": pl.Categorical})
+        cat, cont = classify_columns(df, set())
+        assert "c" in cat
+
+    def test_classify_string_at_threshold_boundary(self):
+        """String column with exactly threshold unique values is categorical."""
+        df = pl.DataFrame({"s": [f"val_{i}" for i in range(300)]})
+        cat, cont = classify_columns(df, set(), cat_threshold=300)
         assert "s" in cat

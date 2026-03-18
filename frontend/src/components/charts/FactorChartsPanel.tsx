@@ -182,7 +182,7 @@ export default memo(function FactorChartsPanel({
       )}
 
       {/* Partial Dependence Plot — fitted factors only */}
-      {pdData && factorDiag?.in_model && <PartialDependencePlot data={pdData} />}
+      {pdData && pdData.relativities && factorDiag?.in_model && <PartialDependencePlot data={pdData} />}
 
       {/* Factor Deviance Breakdown — fitted factors only */}
       {devData && factorDiag?.in_model && <FactorDevianceTable data={devData} />}

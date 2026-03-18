@@ -10,14 +10,21 @@ from atelier.schemas import SplitSpec
 
 log = logging.getLogger(__name__)
 
-DEFAULT_CAT_THRESHOLD = 50
+DEFAULT_CAT_THRESHOLD = 300
 
 
 def _is_categorical(s: pl.Series, threshold: int = DEFAULT_CAT_THRESHOLD) -> bool:
-    """Heuristic: treat string columns and low-cardinality integers as categorical."""
-    return s.dtype in (pl.Utf8, pl.Categorical, pl.String) or (
-        s.dtype.is_numeric() and s.n_unique() <= threshold
-    )
+    """Heuristic: treat string/categorical columns and low-cardinality integers as categorical.
+
+    Float columns are always continuous — cardinality is a poor heuristic for floats.
+    """
+    if s.dtype == pl.Categorical:
+        return True
+    if s.dtype in (pl.Utf8, pl.String):
+        return s.n_unique() <= threshold
+    if s.dtype.is_integer():
+        return s.n_unique() <= threshold
+    return False
 
 
 def load_dataframe(path: Path) -> pl.DataFrame:
@@ -95,7 +102,7 @@ def column_meta(df: pl.DataFrame) -> list[dict]:
 def classify_columns(
     df: pl.DataFrame,
     reserved: set[str],
-    cat_threshold: int = 50,
+    cat_threshold: int = DEFAULT_CAT_THRESHOLD,
 ) -> tuple[list[str], list[str]]:
     """Classify DataFrame columns into categorical and continuous factors.
 
