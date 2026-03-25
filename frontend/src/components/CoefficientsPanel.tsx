@@ -374,6 +374,9 @@ function CoefficientTable({
       p: number | null;
       relativity?: number;
       ci?: [number, number];
+      relativityType?: "per_unit" | "range";
+      rangeMin?: number;
+      rangeMax?: number;
     }> = hasDiag
       ? coefs.map((c) => ({
           key: c.feature,
@@ -382,8 +385,11 @@ function CoefficientTable({
           se: c.std_error,
           z: c.z_value,
           p: c.p_value,
-          relativity: c.relativity,
-          ci: c.relativity_ci,
+          relativity: c.relativity_type === "range" ? c.range_relativity ?? c.relativity : c.relativity,
+          ci: c.relativity_type === "range" ? undefined : c.relativity_ci,
+          relativityType: c.relativity_type,
+          rangeMin: c.range_min,
+          rangeMax: c.range_max,
         }))
       : (result?.coef_table ?? []).map((c) => ({
           key: c.name,
@@ -393,6 +399,12 @@ function CoefficientTable({
           z: c.z,
           p: c.pvalue,
         }));
+    // Sort Intercept to the top
+    rows.sort((a, b) => {
+      const aInt = a.name === "Intercept" ? 0 : 1;
+      const bInt = b.name === "Intercept" ? 0 : 1;
+      return aInt - bInt;
+    });
     return rows;
   }, [hasDiag, coefs, result]);
 
@@ -456,19 +468,31 @@ function CoefficientTable({
           <td
             className={cn(
               "px-4 py-2 text-right font-mono text-[0.75rem] font-semibold",
-              row.relativity != null && row.relativity > 1
-                ? "text-red-400"
-                : row.relativity != null && row.relativity < 1
-                  ? "text-emerald-400"
-                  : "text-foreground/70"
+              row.relativityType !== "range" && (
+                row.relativity != null && row.relativity > 1
+                  ? "text-red-400"
+                  : row.relativity != null && row.relativity < 1
+                    ? "text-emerald-400"
+                    : "text-foreground/70"
+              )
             )}
           >
-            {fmt(row.relativity ?? null, 4)}
+            {row.relativityType === "range" && row.rangeMin != null && row.rangeMax != null ? (
+              <span title="Min–max across observed levels (partial dependence)">
+                <span className={row.rangeMin > 1 ? "text-red-400" : row.rangeMin < 1 ? "text-emerald-400" : "text-foreground/70"}>{fmt(row.rangeMin, 4)}</span>
+                <span className="text-muted-foreground"> – </span>
+                <span className={row.rangeMax > 1 ? "text-red-400" : row.rangeMax < 1 ? "text-emerald-400" : "text-foreground/70"}>{fmt(row.rangeMax, 4)}</span>
+              </span>
+            ) : (
+              fmt(row.relativity ?? null, 4)
+            )}
           </td>
         )}
         {hasDiag && (
           <td className="px-4 py-2 text-right font-mono text-[0.6rem] text-muted-foreground">
-            {row.ci ? `[${fmt(row.ci[0], 4)}, ${fmt(row.ci[1], 4)}]` : "\u2014"}
+            {row.relativityType === "range"
+              ? "\u2014"
+              : row.ci ? `[${fmt(row.ci[0], 4)}, ${fmt(row.ci[1], 4)}]` : "\u2014"}
           </td>
         )}
         {hasDiag && vifMap.size > 0 && (
@@ -576,8 +600,13 @@ function CoefficientTable({
         </div>
       )}
 
-      <div className="border-t border-border px-4 py-2 text-[0.6rem] text-muted-foreground">
-        Signif. codes: *** 0.001 ** 0.01 * 0.05 . 0.1
+      <div className="border-t border-border px-4 py-2 text-[0.6rem] text-muted-foreground space-y-0.5">
+        <div>Signif. codes: *** 0.001 ** 0.01 * 0.05 . 0.1</div>
+        {allRows.some((r) => r.relativityType === "range") && (
+          <div>
+            Target-encoded factors show min–max relativity across observed levels (partial dependence).
+          </div>
+        )}
       </div>
     </div>
   );

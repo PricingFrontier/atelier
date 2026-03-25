@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from atelier.schemas import FitRequest
 from atelier.api._json_utils import safe_extract, sanitize_floats
 from atelier.services.dataset_service import apply_split, classify_columns, load_dataframe
+from atelier.services.diagnostics_service import enrich_te_relativities
 from atelier.services.term_service import build_terms_dict
 
 log = logging.getLogger(__name__)
@@ -146,6 +147,11 @@ async def fit_model(req: FitRequest):
     except Exception as exc:
         log.warning("[fit] diagnostics failed: %s", exc, exc_info=True)
         diagnostics_json = None
+
+    # Post-process: replace misleading per-unit relativities for TE features
+    # with range-based relativities from partial dependence
+    if diagnostics_json:
+        enrich_te_relativities(diagnostics_json)
 
     log.info(
         "[fit] returning result: n_obs=%d  n_params=%d  n_terms=%d  fit_ms=%d",

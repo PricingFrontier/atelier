@@ -163,6 +163,14 @@ export interface CoefficientSummaryEntry {
   significant: boolean;
   relativity: number;
   relativity_ci: [number, number];
+  /** "per_unit" (default) or "range" for TE features */
+  relativity_type?: "per_unit" | "range";
+  /** Max/min partial-dependence relativity (TE features only) */
+  range_relativity?: number;
+  /** Min partial-dependence relativity across levels */
+  range_min?: number;
+  /** Max partial-dependence relativity across levels */
+  range_max?: number;
 }
 
 /* ── Factor deviance breakdown ───────────────────────── */
