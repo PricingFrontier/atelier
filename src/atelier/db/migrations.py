@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from atelier.db.engine import get_engine
 from atelier.db.models import Base
@@ -9,10 +10,29 @@ from atelier.db.models import Base
 log = logging.getLogger(__name__)
 
 
+async def _drop_stale_tables(engine: AsyncEngine) -> None:
+    """Drop tables whose schema no longer matches the ORM models.
+
+    Lets create_all rebuild them with the correct schema.
+    """
+    _STALE = {"datasets", "models"}
+    async with engine.begin() as conn:
+        rows = await conn.exec_driver_sql(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
+        for (name,) in rows:
+            if name in _STALE:
+                log.info("[migrations] dropping stale table '%s'", name)
+                await conn.exec_driver_sql(f"DROP TABLE [{name}]")
+
+
 async def ensure_schema() -> None:
     """Create all tables if they don't exist, then add any missing columns."""
     log.info("[migrations] ensuring schema (create_all)")
     engine = get_engine()
+
+    await _drop_stale_tables(engine)
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     log.info("[migrations] base tables ensured")

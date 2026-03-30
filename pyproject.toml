@@ -1,9 +1,9 @@
 [project]
 name = "atel"
-version = "0.1.6"
+version = "0.2.0"
 description = "Browser-based GLM workbench for actuarial pricing"
 readme = "README.md"
-license = { text = "Elastic-2.0" }
+license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.10"
 dependencies = [
     "rustystats>=0.6.3",

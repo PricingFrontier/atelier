@@ -25,7 +25,8 @@
       "Bash(pip show:*)",
       "Bash(ls .venv/Scripts/ruff*)",
       "Bash(ls .venv/bin/ruff*)",
-      "Bash(uvx ruff:*)"
+      "Bash(uvx ruff:*)",
+      "Bash(git log:*)"
     ]
   }
 }
