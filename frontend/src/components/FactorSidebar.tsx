@@ -125,113 +125,120 @@ const FactorSidebar = memo(function FactorSidebar({
     if (!menuCol) return [];
     const col = menuCol;
 
-    if (col.is_categorical) {
-      return [
-        {
-          label: "Category",
-          description: `Dummy encoding (${col.n_unique} levels)`,
-          action: () => addTermAndCloseMenu({ column: col.name, type: "categorical", label: `${col.name} [Cat]` }),
-        },
-        {
-          label: "Target Encoding",
-          description: "Regularized ordered TE",
-          action: () => addTermAndCloseMenu({ column: col.name, type: "target_encoding", label: `${col.name} [TE]` }),
-        },
-        {
-          label: "Frequency Encoding",
-          description: "Proportion-based encoding",
-          action: () => addTermAndCloseMenu({ column: col.name, type: "frequency_encoding", label: `${col.name} [FE]` }),
-        },
-      ];
-    }
+    const categoricalItems: MenuItem[] = col.is_categorical
+      ? [
+          {
+            label: "Category",
+            description: `Dummy encoding (${col.n_unique} levels)`,
+            action: () => addTermAndCloseMenu({ column: col.name, type: "categorical", label: `${col.name} [Cat]` }),
+          },
+          {
+            label: "Target Encoding",
+            description: "Regularized ordered TE",
+            action: () => addTermAndCloseMenu({ column: col.name, type: "target_encoding", label: `${col.name} [TE]` }),
+          },
+          {
+            label: "Frequency Encoding",
+            description: "Proportion-based encoding",
+            action: () => addTermAndCloseMenu({ column: col.name, type: "frequency_encoding", label: `${col.name} [FE]` }),
+          },
+        ]
+      : [];
 
-    // Numeric column
-    return [
-      {
-        label: "Linear",
-        description: "Raw continuous variable",
-        submenu: [
+    const numericItems: MenuItem[] = col.is_numeric
+      ? [
           {
-            label: "Unconstrained",
-            icon: <Minus className="h-3 w-3" />,
-            action: () => addTermAndCloseMenu({ column: col.name, type: "linear", label: `${col.name} [Lin]` }),
+            label: "Linear",
+            description: "Raw continuous variable",
+            submenu: [
+              {
+                label: "Unconstrained",
+                icon: <Minus className="h-3 w-3" />,
+                action: () => addTermAndCloseMenu({ column: col.name, type: "linear", label: `${col.name} [Lin]` }),
+              },
+              {
+                label: "Monotone increasing",
+                icon: <TrendingUp className="h-3 w-3" />,
+                action: () => addTermAndCloseMenu({ column: col.name, type: "linear", monotonicity: "increasing", label: `${col.name} [Lin ↑]` }),
+              },
+              {
+                label: "Monotone decreasing",
+                icon: <TrendingDown className="h-3 w-3" />,
+                action: () => addTermAndCloseMenu({ column: col.name, type: "linear", monotonicity: "decreasing", label: `${col.name} [Lin ↓]` }),
+              },
+            ],
           },
           {
-            label: "Monotone increasing",
-            icon: <TrendingUp className="h-3 w-3" />,
-            action: () => addTermAndCloseMenu({ column: col.name, type: "linear", monotonicity: "increasing", label: `${col.name} [Lin ↑]` }),
-          },
-          {
-            label: "Monotone decreasing",
-            icon: <TrendingDown className="h-3 w-3" />,
-            action: () => addTermAndCloseMenu({ column: col.name, type: "linear", monotonicity: "decreasing", label: `${col.name} [Lin ↓]` }),
-          },
-        ],
-      },
-      {
-        label: "Quadratic",
-        description: `${col.name}²`,
-        action: () => addTermAndCloseMenu({ column: col.name, type: "expression", expr: `${col.name} ** 2`, label: `${col.name}² [Expr]` }),
-      },
-      { separator: true, label: "" },
-      {
-        label: "B-Spline",
-        description: "Flexible smooth curve",
-        submenu: [
-          {
-            label: "Auto-tuned (penalized)",
-            description: "GCV selects smoothing",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "bs", label: `${col.name} [BS auto]` }),
-          },
-          {
-            label: "Fixed df = 3",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "bs", df: 3, label: `${col.name} [BS df=3]` }),
-          },
-          {
-            label: "Fixed df = 5",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "bs", df: 5, label: `${col.name} [BS df=5]` }),
-          },
-          {
-            label: "Fixed df = 7",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "bs", df: 7, label: `${col.name} [BS df=7]` }),
+            label: "Quadratic",
+            description: `${col.name}²`,
+            action: () => addTermAndCloseMenu({ column: col.name, type: "expression", expr: `${col.name} ** 2`, label: `${col.name}² [Expr]` }),
           },
           { separator: true, label: "" },
           {
-            label: "Monotone increasing",
-            icon: <TrendingUp className="h-3 w-3" />,
-            action: () => addTermAndCloseMenu({ column: col.name, type: "bs", monotonicity: "increasing", label: `${col.name} [BS ↑]` }),
+            label: "B-Spline",
+            description: "Flexible smooth curve",
+            submenu: [
+              {
+                label: "Auto-tuned (penalized)",
+                description: "GCV selects smoothing",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "bs", label: `${col.name} [BS auto]` }),
+              },
+              {
+                label: "Fixed df = 3",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "bs", df: 3, label: `${col.name} [BS df=3]` }),
+              },
+              {
+                label: "Fixed df = 5",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "bs", df: 5, label: `${col.name} [BS df=5]` }),
+              },
+              {
+                label: "Fixed df = 7",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "bs", df: 7, label: `${col.name} [BS df=7]` }),
+              },
+              { separator: true, label: "" },
+              {
+                label: "Monotone increasing",
+                icon: <TrendingUp className="h-3 w-3" />,
+                action: () => addTermAndCloseMenu({ column: col.name, type: "bs", monotonicity: "increasing", label: `${col.name} [BS ↑]` }),
+              },
+              {
+                label: "Monotone decreasing",
+                icon: <TrendingDown className="h-3 w-3" />,
+                action: () => addTermAndCloseMenu({ column: col.name, type: "bs", monotonicity: "decreasing", label: `${col.name} [BS ↓]` }),
+              },
+            ],
           },
           {
-            label: "Monotone decreasing",
-            icon: <TrendingDown className="h-3 w-3" />,
-            action: () => addTermAndCloseMenu({ column: col.name, type: "bs", monotonicity: "decreasing", label: `${col.name} [BS ↓]` }),
+            label: "Natural Spline",
+            description: "Linear beyond boundaries",
+            submenu: [
+              {
+                label: "Auto-tuned (penalized)",
+                description: "GCV selects smoothing",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "ns", label: `${col.name} [NS auto]` }),
+              },
+              {
+                label: "Fixed df = 3",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "ns", df: 3, label: `${col.name} [NS df=3]` }),
+              },
+              {
+                label: "Fixed df = 5",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "ns", df: 5, label: `${col.name} [NS df=5]` }),
+              },
+              {
+                label: "Fixed df = 7",
+                action: () => addTermAndCloseMenu({ column: col.name, type: "ns", df: 7, label: `${col.name} [NS df=7]` }),
+              },
+            ],
           },
-        ],
-      },
-      {
-        label: "Natural Spline",
-        description: "Linear beyond boundaries",
-        submenu: [
-          {
-            label: "Auto-tuned (penalized)",
-            description: "GCV selects smoothing",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "ns", label: `${col.name} [NS auto]` }),
-          },
-          {
-            label: "Fixed df = 3",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "ns", df: 3, label: `${col.name} [NS df=3]` }),
-          },
-          {
-            label: "Fixed df = 5",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "ns", df: 5, label: `${col.name} [NS df=5]` }),
-          },
-          {
-            label: "Fixed df = 7",
-            action: () => addTermAndCloseMenu({ column: col.name, type: "ns", df: 7, label: `${col.name} [NS df=7]` }),
-          },
-        ],
-      },
-    ];
+        ]
+      : [];
+
+    // Combine with a separator between sections when both are present
+    if (categoricalItems.length > 0 && numericItems.length > 0) {
+      return [...categoricalItems, { separator: true, label: "" }, ...numericItems];
+    }
+    return [...categoricalItems, ...numericItems];
   }, [menuCol, addTermAndCloseMenu]);
 
   return (

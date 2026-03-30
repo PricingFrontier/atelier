@@ -1,6 +1,6 @@
 [project]
 name = "atel"
-version = "0.2.0"
+version = "0.2.1"
 description = "Browser-based GLM workbench for actuarial pricing"
 readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
